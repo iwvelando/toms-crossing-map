@@ -39,6 +39,14 @@ The board is schematic. Coordinates, elevation, decorative trees/buildings, dist
 
 `src/story.js` contains only reviewed, reader-facing chapter data. Private research, transcripts, timing references, and working notes must remain outside published source and production assets. The root scratch files and private evidence notes are ignored; `npm test` checks that they are absent from the public candidate file set, including accidentally staged files. Do not force-add ignored research files.
 
+## Updating the atlas as you read
+
+Copy the current `movements.md` and `metadata.json` into the repository root, then ask an agent to update from those two files using [the repo skill](skills/update-atlas/SKILL.md). They remain private and ignored. **No other book sources are authorized**, including linked transcripts, other repositories, or web research.
+
+`npm run atlas:check` compares the local snapshot with reviewed coverage. When everything is accounted for, the agent stops without editing the site or regenerating assets. New rows, corrections, changed scope, and partial/blocked work are reported separately. The current three-movement sample is not complete coverage of the supplied source.
+
+See [the source-update guide](docs/source-updates.md) for commands and the append/correction workflow. Public CI uses synthetic fixtures and never needs the private source files.
+
 ## Assets and Git
 
 Commit `public/models/kalin-pawn.glb` with ordinary Git: it is approximately 76 KB and does not need Git Large File Storage (LFS). `.gitattributes` marks GLB files as binary. The editable Blender recipe is `scripts/create-pawn.py`; no Blender installation is needed to build the site from the committed model. Keep `dist/`, dependencies, test output, and generated notices ignored. Commit `package-lock.json`.
@@ -49,7 +57,7 @@ Commit `public/models/kalin-pawn.glb` with ordinary Git: it is approximately 76 
 
 The structure follows the companion Shelf Life project’s static-site conventions: local assets, generated dependency notices, distribution checks, and browser tests under the intended CSP. `deploy/content-security-policy.txt` contains that policy; `npm run preview` sends it as a response header. Inline style attributes are permitted for positioning 3D labels, but inline scripts are not.
 
-Use short/no-cache headers for HTML and stable filenames such as `models/kalin-pawn.glb`; use long immutable caching for hashed `assets/`. Upload new assets before the new HTML and preserve assets still used by open pages. Serve GLB as `model/gltf-binary` and use HTTPS. Hosting infrastructure is defined in `iwvelando/cloud-accounts` at `sites/toms-crossing-map.isaacvelando.com`. The Verify workflow checks the production build in Chromium and WebKit before deploying from `main` through the main-only `production` environment. Infrastructure has been applied and the workflow uses distribution `E262JGOFD733DT`. The public repository has a main-only production environment; merging the verified launch PR publishes its first content. See [the launch checklist](docs/launch.md).
+Use short/no-cache headers for HTML and stable filenames such as `models/kalin-pawn.glb`; use long immutable caching for hashed `assets/`. Upload new assets before the new HTML and preserve assets still used by open pages. Serve GLB as `model/gltf-binary` and use HTTPS. Hosting infrastructure is defined in `iwvelando/cloud-accounts` at `sites/toms-crossing-map.isaacvelando.com`. The Verify workflow checks the production build in Chromium and WebKit before deploying from `main` through the main-only `production` environment. Infrastructure has been applied and the workflow uses distribution `E262JGOFD733DT`. The public repository has a main-only production environment; merging a verified PR publishes its changes. See [the launch checklist](docs/launch.md).
 
 The site’s software is MIT licensed; builds include `LICENSE.txt` and `THIRD-PARTY-NOTICES.txt` for Three.js and Vite’s generated runtime helper. These software licenses do not grant rights to the novel or its characters and settings.
 

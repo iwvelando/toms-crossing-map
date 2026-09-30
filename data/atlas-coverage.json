@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "sourceIdentityHash": "d5de7fa0ec79cec473726d7727e763c1bb08d98f3b7979423ba537536b44fe92",
+  "accepted": null,
+  "receipts": {
+    "2647510b90a527534077dee4961fc6b2d66b834a0f38424fd34de1bebd474841": {
+      "digest": "00912961d6cef7b34d1f6a08328031f8d114ebae97b1364993a61b0b7e7bf84a",
+      "status": "partial",
+      "targets": {
+        "events:leaving-home": "b1242a962fd1e4cfccc478af1391b19a979e8e4c5d5da147f47a3c2920ccfd2e"
+      }
+    },
+    "b8ad164c69a0b33f5e4c00b75876125d16e0f1ee4c683d055337265231819882": {
+      "digest": "c6f1ad807b3e366c422c7f6564c90a408604739cfc4ab7f024db85220cc90fea",
+      "status": "partial",
+      "targets": {
+        "events:foothills": "e19c15eb1bba7437cf58e5bc06b2a5d6a3b76410552ee778716a39fb72d4651a"
+      }
+    },
+    "fef4792543603fdc24ed435892a4d30289a77d63d76a841fd497032d4367f629": {
+      "digest": "61d9fd4274c470e692dcaea436fc9958b6de6dbbfd48bffe4dbe54cfe5e2ce63",
+      "status": "partial",
+      "targets": {
+        "events:paddock": "54a3f5151f08c8fa7ef88b588e65749e19512b894a5c47fbb1bf960d6fbfa6a7"
+      }
+    }
+  }
+}

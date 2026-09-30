@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { auditText } from "./public-audit.mjs";
 const files = await readdir("dist", { recursive: true });
 const forbidden =
-  /(?:movements\.md|metadata\.json|transcript|manifest\.json|chunk_\d+|evidence\.md|\.map$|\.env|\.m4b$|\.wav$|\.mp3$)/i;
+  /(?:atlas-coverage\.json|movements\.md|metadata\.json|transcript|manifest\.json|chunk_\d+|evidence\.md|\.map$|\.env|\.m4b$|\.wav$|\.mp3$)/i;
 assert(
   !files.some((name) => forbidden.test(name)),
   "Private source files leaked into dist",
