@@ -21,6 +21,7 @@ function inPolygon(x, z, vertices) {
 export function createMap(container, labelRoot, onSelect) {
   const scene = new THREE.Scene();
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  let renderPending = false;
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -48,6 +49,7 @@ export function createMap(container, labelRoot, onSelect) {
     overhead = false;
     camera.updateProjectionMatrix();
     controls.update();
+    requestRender();
   }
   reset();
   scene.add(new THREE.HemisphereLight(0xf6f0da, 0x546846, 2.6));
@@ -242,6 +244,7 @@ export function createMap(container, labelRoot, onSelect) {
         }
       });
       container.dataset.asset = "loaded";
+      requestRender();
     },
     undefined,
     () => {
@@ -336,6 +339,7 @@ export function createMap(container, labelRoot, onSelect) {
     mat(palette.gold, { emissive: 0x8e601e, emissiveIntensity: 0.12 }),
   ];
   function update(view, showCharacter = true) {
+    requestRender();
     currentView = view;
     clearGroup(journey);
     clearGroup(landmarks);
@@ -446,6 +450,7 @@ export function createMap(container, labelRoot, onSelect) {
   function zoom(factor) {
     camera.zoom = THREE.MathUtils.clamp(camera.zoom * factor, 0.65, 3);
     camera.updateProjectionMatrix();
+    requestRender();
   }
   function toggleTop() {
     overhead = !overhead;
@@ -457,6 +462,7 @@ export function createMap(container, labelRoot, onSelect) {
           : new THREE.Vector3(24, 32, 36),
       );
     controls.update();
+    requestRender();
     return overhead;
   }
   container.addEventListener("keydown", (event) => {
@@ -521,9 +527,11 @@ export function createMap(container, labelRoot, onSelect) {
     camera.top = halfWidth / aspect;
     camera.bottom = -halfWidth / aspect;
     camera.updateProjectionMatrix();
+    requestRender();
   });
   resize.observe(container);
   function render() {
+    renderPending = false;
     controls.update();
     const occupied = [];
     for (const { element, point, name, number } of labelItems) {
@@ -568,13 +576,22 @@ export function createMap(container, labelRoot, onSelect) {
     }
     renderer.render(scene, camera);
   }
-  renderer.setAnimationLoop(render);
+  // Keep damping smooth while the camera moves, then stop spending GPU/CPU
+  // time on an unchanged board. Resize, story, and asset changes also redraw.
+  function requestRender() {
+    if (renderPending) return;
+    renderPending = true;
+    requestAnimationFrame(render);
+  }
+  controls.addEventListener("change", requestRender);
+  requestRender();
   renderer.domElement.addEventListener("webglcontextlost", (event) => {
     event.preventDefault();
     document.querySelector("#map-fallback").hidden = false;
   });
   renderer.domElement.addEventListener("webglcontextrestored", () => {
     document.querySelector("#map-fallback").hidden = true;
+    requestRender();
   });
   return { update, zoom, reset, toggleTop };
 }

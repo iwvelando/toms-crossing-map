@@ -3,7 +3,7 @@
 The infrastructure PR creates the hosting root, leaving the site Planned until a real deploy passes acceptance. The application PR adds the existing app and release workflow. Keep both reviewable; do not merge the application before these prerequisites exist.
 
 1. Review and merge the cloud-accounts PR after every check passes and its plans match: only the new root should create resources. CI applies infrastructure.
-2. Make `iwvelando/toms-crossing-map` public after reviewing the staged file inventory and release audit. Match `iwvelando/tangent-garden` repository settings using the launch-hub-site parity scripts: squash only, delete merged branches, default-branch ruleset, and main-only `production` environment. The current reference requires `verify`.
+2. Repository visibility is public and the reference’s squash-only merges, automatic branch deletion, default-branch ruleset requiring `verify`, and main-only `production` environment have been configured. Preserve these settings.
 3. With `AWS_PROFILE=household3d-ro`, run `terraform -chdir=sites/toms-crossing-map.isaacvelando.com output` in cloud-accounts. Set `DISTRIBUTION_ID` as a repository Actions variable using the returned distribution ID. The bucket and role are fixed by the reviewed configuration; no AWS secret is stored in GitHub.
 4. Merge the application PR after `check`, `browser`, `webkit`, and `verify` pass. Inspect logs to confirm browser tests ran. Watch Verify on `main` through deploy and smoke.
 5. In cloud-accounts, run `AWS_PROFILE=household3d-ro scripts/verify-site.sh https://toms-crossing-map.isaacvelando.com --bucket toms-crossing-map-site-634753796535 --no-pages --no-feed`. Record the distribution and verification date in a docs-only PR moving the site from Planned to Live.

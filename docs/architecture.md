@@ -33,7 +33,7 @@ The production bundle currently contains only the early curated sample. The chap
 
 This sample stops partway through Chapter One and does not implement the entire chapter. The reading selector offers only before/through Chapter One. Selecting an entry shows the completed movement; it does not animate exact travel or imply continuous presence afterward. Routes are illustrative connectors, not surveyed tracks. Pawn selection focuses the current entry; character isolation is also available through the keyboard-accessible journal button. No saved reading progress, audio playback, geographic coordinates, or backend exists.
 
-For many characters, replace per-object repeated meshes with instancing, add label collision handling, and render on demand rather than continuously. Dynamic geometry is disposed when entries change; materials are shared. The asset loader retains a primitive brass fallback if the GLB cannot load. A WebGL initialization failure leaves the journal available.
+For many characters, replace per-object repeated meshes with instancing, add label collision handling, and retain rendering on demand. The renderer redraws on camera, resize, story, asset, and context-restoration changes; controls keep requesting frames only while damping moves the camera. Dynamic geometry is disposed when entries change; materials are shared. The asset loader retains a primitive brass fallback if the GLB cannot load. A WebGL initialization failure leaves the journal available.
 
 ## Public source and distribution
 
