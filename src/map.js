@@ -339,14 +339,23 @@ export function createMap(container, labelRoot, onSelect) {
     mat(palette.gold, { emissive: 0x8e601e, emissiveIntensity: 0.12 }),
   ];
   function update(view, showCharacter = true) {
+    const kind = view.current?.kind;
+    const color = kind === "recollection" ? 0x708d8a : kind === "spectral" ? 0x9a80bd : kind === "bodily relocation" ? 0x8d715e : palette.gold;
+    pathMaterials[1].color.setHex(color);
+    brass.color.setHex(color);
     requestRender();
     currentView = view;
     clearGroup(journey);
     clearGroup(landmarks);
     labelRoot.replaceChildren();
     labelItems = [];
-    pawnRoot.visible = Boolean(view.current) && showCharacter;
+    pawnRoot.visible = false;
+    container.dataset.event = view.current?.id || "";
+    container.dataset.route = view.drawnRoute.join(",");
+    container.dataset.kind = view.current?.kind || "";
+    container.dataset.position = view.position || "";
     for (const place of view.locations) {
+      if (!Number.isFinite(place.x) || !Number.isFinite(place.z)) continue;
       const y = elevation(place.x, place.z);
       mesh(
         new THREE.CylinderGeometry(0.2, 0.2, 0.09, 28),
@@ -363,7 +372,7 @@ export function createMap(container, labelRoot, onSelect) {
       button.textContent = place.name;
       button.setAttribute("aria-label", `${place.name}, show movement`);
       button.onclick = () => onSelect(place.reveal);
-      if (place.id === view.current?.route.at(-1))
+      if (place.id === view.position)
         button.classList.add("active");
       labelRoot.append(button);
       labelItems.push({
@@ -376,7 +385,11 @@ export function createMap(container, labelRoot, onSelect) {
     if (!view.current) return;
     if (showCharacter)
       for (const event of view.traversed) {
-        const points = routePaths[event.id];
+        if (view.drawnRoute.length < 2) continue;
+        const points = routePaths[event.id] || view.drawnRoute.map(id => {
+          const place = view.locations.find(place => place.id === id);
+          return [place.x, place.z];
+        });
         const sampled = [];
         for (let i = 1; i < points.length; i++) {
           const [ax, az] = points[i - 1],
@@ -413,8 +426,10 @@ export function createMap(container, labelRoot, onSelect) {
         }
       }
     const destination = view.locations.find(
-      (place) => place.id === view.current.route.at(-1),
+      (place) => place.id === view.position && Number.isFinite(place.x) && Number.isFinite(place.z),
     );
+    if (!destination) return;
+    pawnRoot.visible = showCharacter;
     pawnRoot.position.set(
       destination.x,
       elevation(destination.x, destination.z) + 0.12,

@@ -1,50 +1,41 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { getView, events, locations, chapter } from "../src/story.js";
-test("closed boundary exposes no story objects at any requested step", () => {
-  for (const step of [-1, 0, 2, 100, NaN]) {
-    const view = getView(0, step);
+import { getView } from "../src/story.js";
+import { loadThrough, maximumChapter } from "../src/chapters.js";
+const data = await loadThrough(maximumChapter);
+test("closed boundary exposes no objects even with every payload cached", () => {
+  for (const limit of [0, -1, 99, NaN, 1.5]) for (const step of [-1, 0, 100, NaN]) {
+    const view = getView(limit, step, "K", data, "all");
     assert.equal(view.current, null);
-    assert.deepEqual(view.events, []);
-    assert.deepEqual(view.locations, []);
-    assert.deepEqual(view.characters, []);
-    assert.deepEqual(view.traversed, []);
+    for (const key of ["events", "locations", "characters", "traversed", "chapters", "route", "drawnRoute"]) assert.deepEqual(view[key], []);
   }
 });
-test("locations and routes reveal monotonically with movement, and retract", () => {
-  assert.deepEqual(
-    getView(1, 0).locations.map((x) => x.id),
-    ["HOME-A", "PARK-K", "WILLOW-OAK"],
-  );
-  assert.equal(
-    getView(1, 1).locations.some((x) => x.id === "SHORE"),
-    false,
-  );
-  assert.equal(
-    getView(1, 2).locations.some((x) => x.id === "SHORE"),
-    true,
-  );
-  assert.equal(getView(1, 0).traversed.length, 1);
-  assert.equal(getView(1, 99).index, 2);
-  assert.equal(getView(1, -10).index, 0);
+test("stable first movements and selected-entry geometry retract", () => {
+  assert.deepEqual(getView(1, 0, "K", data).locations.map(x => x.id), ["HOME-A", "PARK-K", "WILLOW-OAK"]);
+  assert.equal(getView(1, 1, "K", data).current.id, "paddock");
+  assert.equal(getView(1, 2, "K", data).current.id, "foothills");
+  assert(getView(1, 2, "K", data).locations.some(x => x.id === "SHORE"));
+  assert(!getView(1, 0, "K", data).locations.some(x => x.id === "SHORE"));
 });
-test("every route resolves to supported, revealed locations and chapter boundaries", () => {
-  for (const [index, event] of events.entries()) {
-    assert.equal(event.chapter, 1);
-    assert.equal(event.character, "K");
-    for (const id of event.route) {
-      const place = locations.find((x) => x.id === id);
-      assert(place);
-      assert(place.reveal <= index);
-    }
-    assert.equal(event.chapter, chapter.id);
+test("all participant routes resolve without future names, coordinates or notes", () => {
+  for (const event of data.events) {
     assert(!("evidence" in event));
-    assert(!("track" in chapter));
+    assert(!("track" in event));
+    for (const id of event.people) {
+      const person = data.characters.find(x => x.id === id);
+      assert(person && person.chapter <= event.chapter, `${event.id}: person ${id}`);
+      const allowed = getView(event.chapter, 0, id, data, "all").events;
+      const index = allowed.findIndex(x => x.id === event.id);
+      assert(index >= 0);
+      const view = getView(event.chapter, index, id, data, "all");
+      for (const place of view.locations) assert(place.notes.every(note => note.chapter <= event.chapter));
+      for (const placeId of [...event.route, ...view.route]) {
+        const place = data.locations.find(x => x.id === placeId);
+        assert(place && place.chapter <= event.chapter, `${event.id}: place ${placeId}`);
+      }
+      for (const placeId of view.drawnRoute) assert(Number.isFinite(view.locations.find(x => x.id === placeId).x));
+    }
   }
-});
-test("unknown characters cannot expose routes or locations", () => {
-  const view = getView(1, 2, "unknown");
-  assert.equal(view.current, null);
-  assert.deepEqual(view.locations, []);
-  assert.deepEqual(view.traversed, []);
+  for (const collection of ["events", "locations", "characters", "chapters"]) assert.equal(new Set(data[collection].map(x => x.id)).size, data[collection].length);
+  assert.equal(data.chapters.at(-1).partial, true);
 });

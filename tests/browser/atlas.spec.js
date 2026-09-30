@@ -20,10 +20,10 @@ test("chapter gate, route steps, character isolation, and reset @smoke", async (
   await expect(page.locator("#entry-detail h3")).toHaveText(
     "Above the tree streets",
   );
-  await expect(page.locator(".map-label")).toHaveCount(6);
+  await expect(page.locator(".map-label")).toHaveCount(3);
   await expect(
     page.getByRole("button", { name: "Next movement" }),
-  ).toBeDisabled();
+  ).toBeEnabled();
   await page.locator("#character").click();
   await expect(page.locator("#character")).toHaveAttribute(
     "aria-pressed",
@@ -42,7 +42,7 @@ test("chapter gate, route steps, character isolation, and reset @smoke", async (
     path: "test-results/atlas-desktop.png",
     fullPage: true,
   });
-  await page.getByRole("combobox").click();
+  await page.locator("#chapter-limit").click();
   await page.getByRole("option", { name: /Before Chapter One/ }).click();
   await expect(page.locator(".map-label")).toHaveCount(0);
   await expect(page.locator("#entries")).toBeEmpty();
@@ -92,13 +92,13 @@ test("chapter picker commits only explicit selections and supports dismissal", a
   page,
 }) => {
   await page.goto("/");
-  const picker = page.getByRole("combobox");
+  const picker = page.locator("#chapter-limit");
   await picker.focus();
   await picker.press("ArrowDown");
   await picker.press("End");
   await expect(picker).toHaveAttribute(
     "aria-activedescendant",
-    "chapter-option-1",
+    "chapter-option-12",
   );
   await expect(page.locator("#locked-state")).toBeVisible();
   await picker.press("Escape");
@@ -171,11 +171,11 @@ test("styled chapter menu fits a phone and allows touch selection", async ({
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  await page.getByRole("combobox").click();
+  await page.locator("#chapter-limit").click();
   const box = await page.getByRole("listbox").boundingBox();
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(390);
   await page.screenshot({ path: "test-results/chapter-menu-mobile.png" });
-  await page.getByRole("option", { name: /Chapter One Paddock B/ }).click();
+  await page.getByRole("option", { name: /^Chapter One/ }).click();
   await expect(page.locator("#entry-detail h3")).toHaveText("Leaving home");
 });
