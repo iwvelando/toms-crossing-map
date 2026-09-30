@@ -1,0 +1,272 @@
+name: Verify
+on:
+  # PR branches are verified by their pull_request run; push covers main only.
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  # On main, looks for a passing pull request run that already tested this exact
+  # tree. Each run's `check` job uploads its build as `dist-<tree>`; a pull request
+  # run tests the merge of its head into main, so a squash merge made before main
+  # moves on yields the same tree. When one is found, the tests are skipped and
+  # `deploy` publishes that run's build; otherwise the full suite runs here. Only
+  # runs from this repository count, so a fork cannot supply a build.
+  reuse:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      run-id: ${{ steps.find.outputs.run-id }}
+      tree: ${{ steps.find.outputs.tree }}
+    steps:
+      - id: find
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          tree=$(gh api "repos/$GH_REPO/commits/$SHA" --jq .commit.tree.sha)
+          echo "tree=$tree" >> "$GITHUB_OUTPUT"
+          runs=$(gh api "repos/$GH_REPO/actions/artifacts?name=dist-$tree&per_page=100" \
+            --jq '.artifacts[] | select(.expired | not) | .workflow_run.id')
+          for run in $runs; do
+            passed=$(gh api "repos/$GH_REPO/actions/runs/$run" --jq 'select(
+              .event == "pull_request" and .conclusion == "success" and
+              .head_repository.full_name == env.GH_REPO and
+              .path == ".github/workflows/ci.yml") | .html_url')
+            if [ -n "$passed" ]; then
+              echo "Tree $tree passed in $passed; deploying that build."
+              echo "run-id=$run" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          done
+          echo "No passing pull request run tested tree $tree; running the full suite."
+
+  check:
+    needs: reuse
+    if: ${{ !cancelled() && needs.reuse.outputs.run-id == '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      tree: ${{ steps.tree.outputs.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - id: tree
+        run: echo "sha=$(git rev-parse 'HEAD^{tree}')" >> "$GITHUB_OUTPUT"
+      # Pull request runs upload too, so main can deploy a build that already passed.
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dist-${{ steps.tree.outputs.sha }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+          overwrite: true
+
+  # Browser integration checks against the production build and policy.
+  browser:
+    needs: reuse
+    if: ${{ !cancelled() && needs.reuse.outputs.run-id == '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      # Runs against the production build in dist/, under the production CSP.
+      - run: npx playwright test
+      - if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: chromium-test-results
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # Safari and iOS: narrow-screen chapter selection and journal layout.
+  webkit:
+    needs: reuse
+    if: ${{ !cancelled() && needs.reuse.outputs.run-id == '' }}
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install webkit
+      - run: npm run test:webkit
+      # Preserve browser crash reports when WebKit fails.
+      - if: failure()
+        run: |
+          mkdir -p test-results/crash-reports
+          for dir in ~/Library/Logs/DiagnosticReports /Library/Logs/DiagnosticReports; do
+            find "$dir" -maxdepth 1 -type f -mmin -30 \( -name '*WebKit*' -o -name '*WebContent*' -o -name 'JetsamEvent*' -o -name '*pw_run*' \) \
+              -exec cp {} test-results/crash-reports/ \; 2>/dev/null || true
+          done
+          ls -la test-results/crash-reports
+      - if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: webkit-test-results
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # The one required status check. Every test job must pass, except on main when
+  # `reuse` found a passing run of this exact tree and the tests were skipped.
+  verify:
+    needs: [reuse, check, browser, webkit]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - env:
+          REUSED: ${{ needs.reuse.outputs.run-id }}
+          RESULTS: ${{ needs.check.result }} ${{ needs.browser.result }} ${{ needs.webkit.result }}
+        run: |
+          for result in $RESULTS; do
+            case "$result" in
+              success) ;;
+              skipped) test -n "$REUSED" || { echo "::error::A test job was skipped."; exit 1; } ;;
+              *) echo "::error::A test job finished with: $result"; exit 1 ;;
+            esac
+          done
+
+  # Publishes the exact build that passed `verify`, from this run or from the pull
+  # request run `reuse` found. Hosting is managed in iwvelando/cloud-accounts
+  # (sites/toms-crossing-map.isaacvelando.com). Only this job can get AWS credentials,
+  # and the `production` environment only allows main.
+  deploy:
+    needs: [reuse, check, verify]
+    if: >-
+      !cancelled() && needs.verify.result == 'success' &&
+      github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: production
+      url: https://toms-crossing-map.isaacvelando.com
+    concurrency:
+      group: deploy
+      cancel-in-progress: false
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+    env:
+      AWS_REGION: us-east-1
+      DEPLOY_ROLE_ARN: arn:aws:iam::634753796535:role/toms-crossing-map-deploy
+      BUCKET: toms-crossing-map-site-634753796535
+      DISTRIBUTION_ID: ${{ vars.DISTRIBUTION_ID }}
+      SITE_URL: https://toms-crossing-map.isaacvelando.com
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: deploy
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dist-${{ needs.check.outputs.tree || needs.reuse.outputs.tree }}
+          path: dist
+          run-id: ${{ needs.reuse.outputs.run-id || github.run_id }}
+          github-token: ${{ github.token }}
+
+      # `sync --delete` below would wipe the site if the build came out empty.
+      - name: sanity-check build
+        run: |
+          test -n "$DISTRIBUTION_ID" || { echo "::error::Set repository variable DISTRIBUTION_ID from the infrastructure output before merging."; exit 1; }
+          for f in index.html 404.html og-image.png apple-touch-icon.png LICENSE.txt THIRD-PARTY-NOTICES.txt models/kalin-pawn.glb; do test -s "dist/$f"; done
+          ls dist/assets/*.js
+
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ env.DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # Fingerprinted assets first, so the new index.html never references a missing
+      # file. Old assets are kept for pages that were already open during a deploy.
+      - name: upload
+        run: |
+          aws s3 sync dist/assets/ "s3://$BUCKET/assets/" \
+            --cache-control 'public, max-age=31536000, immutable'
+          aws s3 sync dist/models/ "s3://$BUCKET/models/" \
+            --content-type model/gltf-binary --cache-control 'public, max-age=300'
+          aws s3 sync dist/ "s3://$BUCKET/" --delete \
+            --exclude 'assets/*' --exclude 'models/*' \
+            --cache-control 'public, max-age=300'
+
+      - name: invalidate CloudFront
+        run: |
+          id=$(aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION_ID" \
+            --paths '/*' --query Invalidation.Id --output text)
+          aws cloudfront wait invalidation-completed --distribution-id "$DISTRIBUTION_ID" --id "$id"
+
+      - name: check headers
+        run: |
+          header() { curl -fsSI "$SITE_URL$1" | tr -d '\r' | grep -i "^$2:" | cut -d' ' -f2-; }
+          if [ "$(header / content-security-policy)" != "$(tr -d '\n' < deploy/content-security-policy.txt)" ]; then
+            echo "::error::The live CSP differs from deploy/content-security-policy.txt. Update iwvelando/cloud-accounts to match."
+            exit 1
+          fi
+          test "$(header /models/kalin-pawn.glb content-type)" = model/gltf-binary
+          curl -fsS "$SITE_URL/" | grep -q "<title>Tom’s Crossing"
+
+  # A real browser against the live site, after the deploy. No AWS credentials.
+  smoke:
+    needs: deploy
+    # The default success() would skip this whenever `reuse` skipped the test jobs.
+    if: ${{ !cancelled() && needs.deploy.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test --grep @smoke
+        env:
+          BASE_URL: https://toms-crossing-map.isaacvelando.com
+
+  # Runs on main started by a workflow (e.g. Dependabot merges) notify no one, so a
+  # failure on main opens an issue, or comments on the one already open.
+  alert:
+    needs: [verify, deploy, smoke]
+    if: failure() && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TITLE: Production deploy failed
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      SHA: ${{ github.sha }}
+    steps:
+      - run: |
+          body="Verify run $RUN_URL failed on main at $SHA. The live site may be stale or broken. Fix forward, or revert the change and let it redeploy."
+          open=$(gh issue list --state open --search "\"$TITLE\" in:title" --json number,title \
+            --jq "map(select(.title == env.TITLE)) | .[0].number // empty")
+          if [ -n "$open" ]; then gh issue comment "$open" --body "$body"
+          else gh issue create --title "$TITLE" --body "$body"; fi

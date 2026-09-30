@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#242c26" />
+    <meta
+      name="description"
+      content="An unofficial fan atlas of Tom’s Crossing by Mark Z. Danielewski. Explore character journeys on an imagined tabletop map, chapter by chapter."
+    />
+    <title>Tom’s Crossing — An unofficial fan atlas</title>
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:title"
+      content="Tom’s Crossing — An unofficial fan atlas"
+    />
+    <meta
+      property="og:description"
+      content="An unofficial fan atlas of Tom’s Crossing by Mark Z. Danielewski. Explore character journeys on an imagined tabletop map, chapter by chapter."
+    />
+    <link rel="canonical" href="https://toms-crossing-map.isaacvelando.com/" />
+    <meta property="og:url" content="https://toms-crossing-map.isaacvelando.com/" />
+    <meta property="og:image" content="https://toms-crossing-map.isaacvelando.com/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="An imagined carved tabletop landscape beneath the Tom’s Crossing title, with an unofficial fan atlas caption." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="masthead">
+        <a class="brand" href="./" aria-label="Tom’s Crossing, reset atlas"
+          ><span class="brand-mark" aria-hidden="true">T<span>╱</span>C</span
+          ><span>Tom’s Crossing<small>A TABLETOP ATLAS</small></span></a
+        >
+        <div class="reading-control">
+          <span class="lock" aria-hidden="true">▣</span>
+          <div class="chapter-picker" id="chapter-picker">
+            <span id="chapter-limit-label" class="picker-label"
+              >I’ve read through</span
+            >
+            <button
+              id="chapter-limit"
+              type="button"
+              role="combobox"
+              aria-haspopup="listbox"
+              aria-expanded="false"
+              aria-controls="chapter-options"
+              aria-labelledby="chapter-limit-label chapter-limit-value"
+            >
+              <span id="chapter-limit-value">Before Chapter One</span
+              ><svg aria-hidden="true" viewBox="0 0 16 16">
+                <path d="m4 6 4 4 4-4" />
+              </svg>
+            </button>
+            <ul
+              id="chapter-options"
+              role="listbox"
+              aria-labelledby="chapter-limit-label"
+              hidden
+            >
+              <li
+                id="chapter-option-0"
+                role="option"
+                aria-selected="true"
+                data-value="0"
+              >
+                <span
+                  >Before Chapter One<small
+                    >Keep the journey hidden</small
+                  ></span
+                ><span class="option-check" aria-hidden="true">✓</span>
+              </li>
+              <li
+                id="chapter-option-1"
+                role="option"
+                aria-selected="false"
+                data-value="1"
+              >
+                <span>Chapter One<small>Paddock B</small></span
+                ><span class="option-check" aria-hidden="true">✓</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <button class="quiet-button" id="about-button">
+          About the map <span aria-hidden="true">↗</span>
+        </button>
+      </header>
+      <main>
+        <section class="map-panel" aria-label="Interactive tabletop map">
+          <div class="map-heading">
+            <span class="eyebrow">THE FIRST STEPS</span>
+            <h1>From the flats<br />to the foothills.</h1>
+            <p>An imagined landscape. An evidenced journey.</p>
+          </div>
+          <div
+            id="map"
+            tabindex="0"
+            role="region"
+            aria-label="3D map. Drag to rotate, Shift drag or right drag to pan, scroll to zoom. Arrow keys rotate; Shift and arrows pan. Plus and minus zoom."
+          ></div>
+          <div id="map-labels" aria-label="Revealed locations"></div>
+          <div class="map-toolbar" aria-label="Map controls">
+            <button id="zoom-in" aria-label="Zoom in">+</button
+            ><button id="zoom-out" aria-label="Zoom out">−</button><span></span
+            ><button
+              id="view-top"
+              aria-label="Toggle overhead view"
+              aria-pressed="false"
+            >
+              ▱</button
+            ><button id="reset-view" aria-label="Reset map view">⟲</button>
+          </div>
+          <div class="map-key">
+            <span class="key-line"></span><span>Journey order</span
+            ><span class="key-dot"></span><span>Current position</span>
+          </div>
+          <p class="map-disclaimer">
+            SCHEMATIC TERRAIN <span>·</span> NOT TO SCALE
+          </p>
+          <div class="map-instructions">
+            Drag to orbit <span>·</span> Shift-drag or right-drag to pan
+            <span>·</span> Scroll to zoom
+          </div>
+          <div id="map-fallback" hidden>
+            <p>
+              The 3D view needs WebGL. You can still explore every movement in
+              the journal.
+            </p>
+          </div>
+        </section>
+        <aside class="journal" aria-label="Character journal">
+          <div class="journal-top">
+            <span class="eyebrow">FIELD JOURNAL</span
+            ><span class="edition">A READER’S ATLAS</span>
+          </div>
+          <div id="locked-state">
+            <div class="lock-illustration" aria-hidden="true">▣</div>
+            <h2>Keep your place<br />in the story.</h2>
+            <p>
+              Choose the chapter you’ve finished. The map and journal will
+              reveal only this early slice of the journey.
+            </p>
+            <button id="begin" class="primary-button">
+              I’ve finished Chapter One
+            </button>
+            <p class="small-copy">
+              Currently tracing one character’s first three movements. Nothing
+              beyond Chapter One is included.
+            </p>
+          </div>
+          <div id="unlocked-state" hidden>
+            <div class="character-row">
+              <button
+                id="character"
+                class="character-button"
+                aria-pressed="true"
+                title="Toggle Kalin’s route"
+              >
+                <span class="avatar">K</span
+                ><span
+                  ><strong>Kalin March</strong
+                  ><small>Selected character</small></span
+                ><span class="selected-mark">✓</span>
+              </button>
+            </div>
+            <div class="chapter-heading">
+              <span class="eyebrow">CHAPTER ONE</span>
+              <h2>Paddock B</h2>
+              <p>Wednesday, October 27</p>
+            </div>
+            <ol id="entries" class="entries" aria-label="Movements"></ol>
+            <article id="entry-detail" aria-live="polite"></article>
+            <div class="step-controls">
+              <button id="previous" aria-label="Previous movement">←</button
+              ><span id="step-count"></span
+              ><button id="next" aria-label="Next movement">→</button>
+            </div>
+          </div>
+          <div class="journal-footer">
+            <span class="source-mark" aria-hidden="true">≋</span>
+            <p>
+              A reader’s interpretation, chapter by chapter.<br /><span
+                >The atlas grows as the reading continues.</span
+              >
+            </p>
+          </div>
+        </aside>
+      </main>
+      <footer class="page-footer">
+        <div class="footer-identity">
+          <span class="eyebrow">AN UNOFFICIAL FAN ATLAS</span
+          ><span class="footer-motto">Rotate the world. Keep your place.</span>
+        </div>
+        <div class="footer-credit">
+          <p>
+            <cite>Tom’s Crossing</cite> is a novel by
+            <strong>Mark Z. Danielewski</strong>. The original work and its
+            characters and settings are © Mark Z. Danielewski. All rights
+            reserved.
+          </p>
+          <p>
+            This independent fan interpretation is not affiliated with, endorsed
+            by, or sponsored by the author or publisher. Map geometry and
+            commentary are the site creator’s interpretations, not an official
+            map. No book text or audiobook recordings are reproduced.
+          </p>
+        </div>
+        <a class="footer-notices" href="./THIRD-PARTY-NOTICES.txt"
+          >Third-party notices</a
+        >
+      </footer>
+    </div>
+    <dialog id="about">
+      <div class="dialog-head">
+        <span class="eyebrow">A NOTE ON THIS ATLAS</span
+        ><button id="close-about" aria-label="Close about dialog">×</button>
+      </div>
+      <h2>A board, not a survey.</h2>
+      <p>
+        This is an unofficial fan interpretation of
+        <cite>Tom’s Crossing</cite> by Mark Z. Danielewski. It follows
+        characters and chapters so you can explore alongside your own reading.
+      </p>
+      <p>
+        The carved hills, vegetation, buildings, distances, and bends are
+        imagined scenery. Gold lines show the order of a journey, not a surveyed
+        trail. Journal notes explain where the geography is uncertain.
+      </p>
+      <p>
+        The atlas is being built as one reader listens to the audiobook.
+        Character and place spellings are currently taken from audio rather than
+        printed text, and will be refined as the site develops.
+      </p>
+      <p>
+        Currently, the atlas traces one character’s first three movements in
+        Chapter One. Reading limits reset on reload. Choose only a chapter
+        you’ve finished; later chapters are not included.
+      </p>
+      <p>
+        Drag to orbit, Shift-drag or right-drag to pan, and scroll to zoom. On
+        touch screens, drag with one finger to orbit and use two fingers to pan
+        or zoom. Select a journal entry to move the character’s piece.
+      </p>
+      <p class="small-copy">
+        The novel and its characters and settings remain the author’s
+        copyrighted work. This site does not claim ownership of the source
+        material or permission or endorsement from its rights holders.
+      </p>
+    </dialog>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
