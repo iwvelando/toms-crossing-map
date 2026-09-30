@@ -26,6 +26,6 @@ Link previews reuse the page title and description exactly. `npm run build && np
 
 ## Hosting
 
-`iwvelando/cloud-accounts` owns S3, CloudFront, ACM, Route53, and the scoped deploy role in `sites/toms-crossing-map.isaacvelando.com`. Publish only `dist/` through `.github/workflows/ci.yml`. Merging to `main` deploys after all verification jobs pass. Never deploy another way. Apply infrastructure first, make the source repository public, configure a main-only `production` environment, and set repository variable `DISTRIBUTION_ID` from Terraform’s output before merging the launch PR.
+`iwvelando/cloud-accounts` owns S3, CloudFront, ACM, Route53, and the scoped deploy role in `sites/toms-crossing-map.isaacvelando.com`. Publish only `dist/` through `.github/workflows/ci.yml`. Merging to `main` deploys after all verification jobs pass. Never deploy another way. Infrastructure has been applied, the source repository is public, and the main-only `production` environment is configured. The workflow uses distribution `E262JGOFD733DT` from Terraform’s output. Confirm every CI check passes before merging the launch PR.
 
 Match the reference repository’s squash-only merge policy and required `verify` check. Dependabot patch/minor updates merge only after Verify passes and dispatch a deployment; majors require review. The live `@smoke` suite is read-only. After the first deploy, run cloud-accounts’ acceptance script with the read-only AWS profile and record the site as Live there.

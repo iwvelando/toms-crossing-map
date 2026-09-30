@@ -1,0 +1,27 @@
+{
+  "name": "toms-crossing-map",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/build-notices.mjs && vite --host 127.0.0.1",
+    "build": "node scripts/build-notices.mjs && vite build && node scripts/check-dist.mjs",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "node --test tests/*.test.mjs && node scripts/check-public.mjs",
+    "test:browser": "playwright test",
+    "share-card": "node scripts/build-share-card.mjs",
+    "check": "npm test && npm run build",
+    "test:webkit": "WEBKIT=1 playwright test --project=webkit"
+  },
+  "dependencies": {
+    "three": "0.180.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "vite": "7.3.6"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "license": "MIT"
+}
