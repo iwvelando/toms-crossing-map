@@ -1,0 +1,38 @@
+node_modules/
+dist/
+.playwright/
+playwright-report/
+test-results/
+.DS_Store
+*.blend1
+
+# Private working sources: never publish or commit.
+/metadata.json
+/movements.md
+/docs/evidence.md
+/local/
+.env
+.env.*
+!.env.example
+*.log
+
+# Generated distribution notices.
+/public/THIRD-PARTY-NOTICES.txt
+
+# Agent runtime state and credentials.
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+.codex/
+.aws/
+*.pem
+*.key
+*.tfstate*
+*.map
+*.m4b
+*.mp3
+*.wav
+/research/
+/notes/
+/transcripts/
+
+/public/LICENSE.txt
