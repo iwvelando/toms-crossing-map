@@ -23,11 +23,11 @@ The production bundle currently contains only the early curated sample. The chap
 ## Next implementation slices
 
 1. Refine the schematic layout and marker scale while preserving the distinction between narrated relationships and invented geography.
-2. Add a validated import/projection workflow with per-field disclosure provenance, while preserving a reviewed export allowlist.
+2. Use the coverage reconciliation workflow in `docs/source-updates.md`; implement missing records with per-field disclosure provenance and a reviewed export allowlist.
 3. Add characters as separate routes; preserve living travel, presence, reports, plans, recollections, and spectral layers as distinct classifications. The current atlas implements only one character’s travel.
 4. Extend the evidence-approved geography with stable layout coordinates, source-supported relative constraints, and conflict notes. Coordinates must remain labeled as invented until evidence supports them.
 5. Add chapter-level lazy loading and tests using synthetic future records to guard against mixed-disclosure summaries and place names.
-6. Deploy `dist` to the chosen S3/CloudFront setup after acceptance. Review the actual output inventory before each release.
+6. Publish through the existing verified PR/CI workflow. Review the actual output inventory before each release.
 
 ## Known limitations
 
@@ -42,3 +42,9 @@ Scratch sources and private evidence notes are ignored and checked by `scripts/c
 `build-notices.mjs` generates full software dependency notices. The intended Content Security Policy lives in `deploy/content-security-policy.txt`, and Vite preview serves it so browser tests exercise the production restrictions. The Verify workflow gates deployment on production build, release audit, Chromium, and iPhone WebKit checks. Infrastructure lives in `iwvelando/cloud-accounts`; deployment uses GitHub OIDC rather than stored AWS credentials.
 
 The footer credits Mark Z. Danielewski, reserves the rights to the original novel, and identifies the project as an unaffiliated fan interpretation. Do not represent attribution as permission, or extend a software license to the novel.
+
+## Source synchronization
+
+`AGENTS.md` establishes the two-file book-source boundary and routes content updates to `skills/update-atlas/SKILL.md`. `scripts/atlas-coverage.mjs` is a pure reconciliation library; `scripts/atlas-sync.mjs` is the explicit local command interface; `scripts/atlas-projection.mjs` adapts the runtime data and hashes the rendering implementation. The tracked `data/atlas-coverage.json` stores only fingerprints, statuses, and public target references. It is never a browser import.
+
+Completeness requires human/agent semantic review plus behavioral verification; a matching hash proves only that a previously reviewed input did not change. There is no automatic story-text importer or bulk “mark complete” operation. Public CI validates bookkeeping and synthetic deltas without private input files. See `docs/source-updates.md` for the state model and no-op contract.
