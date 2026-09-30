@@ -14,7 +14,7 @@
     "test:webkit": "WEBKIT=1 playwright test --project=webkit"
   },
   "dependencies": {
-    "three": "0.180.0"
+    "three": "0.186.1"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",
