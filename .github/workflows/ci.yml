@@ -176,7 +176,7 @@ jobs:
       AWS_REGION: us-east-1
       DEPLOY_ROLE_ARN: arn:aws:iam::634753796535:role/toms-crossing-map-deploy
       BUCKET: toms-crossing-map-site-634753796535
-      DISTRIBUTION_ID: ${{ vars.DISTRIBUTION_ID }}
+      DISTRIBUTION_ID: E262JGOFD733DT
       SITE_URL: https://toms-crossing-map.isaacvelando.com
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -192,7 +192,7 @@ jobs:
       # `sync --delete` below would wipe the site if the build came out empty.
       - name: sanity-check build
         run: |
-          test -n "$DISTRIBUTION_ID" || { echo "::error::Set repository variable DISTRIBUTION_ID from the infrastructure output before merging."; exit 1; }
+          test -n "$DISTRIBUTION_ID" || { echo "::error::Configure DISTRIBUTION_ID from the infrastructure output before merging."; exit 1; }
           for f in index.html 404.html og-image.png apple-touch-icon.png LICENSE.txt THIRD-PARTY-NOTICES.txt models/kalin-pawn.glb; do test -s "dist/$f"; done
           ls dist/assets/*.js
 
