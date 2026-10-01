@@ -1,10 +1,10 @@
 import { readdir, readFile } from "node:fs/promises";
 import { relative, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { chapter, characters, locations, events } from "../src/story.js";
+import { loadThrough, maximumChapter } from "../src/chapters.js";
 import { digest } from "./atlas-coverage.mjs";
 
-// Update this adapter when the runtime gains a chapters array or split data files.
+// Development-only projection reads all reviewed payloads; never imported by the site.
 // Hash rendering code/assets as well as records so a removed route or model
 // cannot leave an earlier "fully reviewed" snapshot looking current.
 export async function readProjection() {
@@ -33,5 +33,5 @@ export async function readProjection() {
   implementation["index.html"] = digest(
     await readFile(new URL("../index.html", import.meta.url), "utf8"),
   );
-  return { chapters: [chapter], characters, locations, events, implementation };
+  return { ...(await loadThrough(maximumChapter)), implementation };
 }

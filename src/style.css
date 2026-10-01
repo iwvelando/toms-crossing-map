@@ -989,3 +989,18 @@ main {
     transition: none;
   }
 }
+
+/* Larger journals keep the same paper treatment and remain manageable on phones. */
+.journal-control { display: block; position: relative; font-size: 11px; color: var(--muted); margin: 16px 0; }
+.journal-control::after { content: "⌄"; position: absolute; right: 13px; bottom: 12px; font: 16px Arial, sans-serif; pointer-events: none; }
+.journal-control select { appearance: none; display: block; width: 100%; min-width: 0; min-height: 44px; margin-top: 7px; padding: 10px 32px 10px 10px; border: 1px solid var(--line); border-radius: 0; color: var(--ink); background: var(--paper); font: 13px Arial, sans-serif; }
+select:focus-visible { outline: 3px solid #ad6b22; outline-offset: 3px; }
+.entries { max-height: 240px; overflow-y: auto; padding-right: 7px; }
+#chapter-options { max-height: min(450px, 60svh); overflow-y: auto; }
+#entry-detail .participants, #entry-detail .place-sequence { font: 12px/1.6 Arial, sans-serif; overflow-wrap: anywhere; }
+#load-status, #empty-state { font: 13px/1.6 Georgia, serif; }
+@media (max-width: 720px) {
+  .entries { display: block; }
+  .entry-button { flex-direction: row; align-items: center; }
+  #chapter-limit { overflow-wrap: anywhere; }
+}

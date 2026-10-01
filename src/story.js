@@ -1,119 +1,61 @@
-// Reviewed, reader-facing chapter data. Private research stays outside this module.
-export const chapter = { id: 1, title: "Paddock B", label: "Chapter One" };
-export const characters = [
-  { id: "K", name: "Kalin March", initial: "K", chapter: 1 },
-];
-export const locations = [
-  {
-    id: "HOME-A",
-    name: "March apartment",
-    x: -10,
-    z: 5,
-    y: 0.12,
-    reveal: 0,
-    chapter: 1,
-  },
-  {
-    id: "PARK-K",
-    name: "Kiwanis Park",
-    x: -6.5,
-    z: 3,
-    y: 0.12,
-    reveal: 0,
-    chapter: 1,
-  },
-  {
-    id: "WILLOW-OAK",
-    name: "Willow & Oak",
-    x: -2.6,
-    z: 4.6,
-    y: 0.12,
-    reveal: 0,
-    chapter: 1,
-  },
-  {
-    id: "PAD-B",
-    name: "Paddock B",
-    x: -1.2,
-    z: 1.8,
-    y: 0.12,
-    reveal: 1,
-    chapter: 1,
-  },
-  {
-    id: "HILLS",
-    name: "Oak Hills",
-    x: 3.3,
-    z: -0.4,
-    y: 0.73,
-    reveal: 2,
-    chapter: 1,
-  },
-  {
-    id: "SHORE",
-    name: "Shoreline path",
-    x: 8,
-    z: -4.5,
-    y: 1.95,
-    reveal: 2,
-    chapter: 1,
-  },
-];
-export const events = [
-  {
-    id: "leaving-home",
-    character: "K",
-    chapter: 1,
-    title: "Leaving home",
-    time: "Wednesday · about 4:07 p.m.",
-    mode: "On foot",
-    summary:
-      "Kalin leaves the March apartment, crosses the small parking lot, and leaves the street for Kiwanis Park. He continues to Willow and Oak.",
-    route: ["HOME-A", "PARK-K", "WILLOW-OAK"],
-    note: "The order of these places is narrated. The street alignment and distances between them are not established.",
-  },
-  {
-    id: "paddock",
-    character: "K",
-    chapter: 1,
-    title: "Out of the paddock",
-    time: "Wednesday · after leaving home",
-    mode: "Riding Navidad · leading Mouse",
-    summary:
-      "Finding Paddock A empty, Kalin enters Paddock B, halters the horses, mounts Navidad, and leads Mouse out onto Willow.",
-    route: ["WILLOW-OAK", "PAD-B", "WILLOW-OAK"],
-    note: "The exit onto Willow is distinct from the gate between Paddocks A and B. This route does not assign responsibility for the earlier transfer of the horses.",
-  },
-  {
-    id: "foothills",
-    character: "K",
-    chapter: 1,
-    title: "Above the tree streets",
-    time: "Wednesday · afternoon / evening",
-    mode: "Riding Navidad · leading Mouse",
-    summary:
-      "Kalin leaves Willow for a narrow path through brush, passes through Oak Hills and undeveloped lots, and climbs two switchbacks. A steeper ascent brings the horses to the gravel service path.",
-    route: ["WILLOW-OAK", "HILLS", "SHORE"],
-    note: "The ascent and two switchbacks are narrated. Their shapes, bearings, and elevations on this board are illustrative.",
-  },
-];
-export function getView(limit, step, characterId = "K") {
-  const allowed = events.filter(
-    (event) => event.chapter <= limit && event.character === characterId,
-  );
-  const index = Math.max(
-    0,
-    Math.min(Number.isFinite(step) ? Math.floor(step) : 0, allowed.length - 1),
-  );
-  return {
-    events: allowed,
-    index,
-    current: allowed[index] ?? null,
-    characters: characters.filter((person) => person.chapter <= limit),
-    locations: locations.filter(
-      (place) =>
-        place.chapter <= limit && place.reveal <= index && allowed.length,
-    ),
-    traversed: allowed.slice(0, index + 1),
-  };
+// Pure disclosure projection. Chapter payloads enter only after explicit selection.
+export function combinePayloads(payloads) {
+  const data = { chapters: [], characters: [], locations: [], events: [] };
+  for (const payload of payloads) {
+    for (const key of Object.keys(data)) data[key].push(...(payload[key] || []));
+  }
+  data.events = data.events.map(event => ({ ...event, disclosures: [...(event.disclosures || [])] }));
+  data.locations = data.locations.map(place => ({ ...place, notes: [...(place.notes || [])] }));
+  for (const payload of payloads) {
+    for (const addition of payload.eventAdditions || []) {
+      const event = data.events.find(event => event.id === addition.id);
+      if (!event) throw new Error("Disclosure references an unknown event");
+      const { id, ...disclosure } = addition;
+      event.disclosures.push(disclosure);
+    }
+    for (const note of payload.annotations || []) {
+      const place = data.locations.find(place => place.id === note.id);
+      if (!place) throw new Error("Annotation references an unknown location");
+      place.notes.push({ chapter: note.chapter, text: note.text });
+    }
+  }
+  return data;
+}
+const initial = combinePayloads([]);
+function disclosedEvent(event, limit) {
+  const { disclosures = [], ...visible } = event;
+  for (const disclosure of disclosures.filter(disclosure => disclosure.chapter <= limit)) {
+    visible.routes = { ...visible.routes, ...(disclosure.routes || {}) };
+    visible.people = [...new Set([...visible.people, ...(disclosure.people || [])])];
+    visible.note = `${visible.note} ${disclosure.note || ""}`.trim();
+  }
+  return visible;
+}
+function forParticipant(event, person) {
+  const personId = person.id;
+  if (person.spectral && !["recollection", "plan", "dream"].includes(event.kind))
+    return { ...event, kind: "spectral", mode: "Spectral accompaniment / presence" };
+  const route = event.routes?.[personId];
+  if (route?.length === 1 && !event.actors.includes(personId) && ["travel", "failed ascent", "bodily relocation"].includes(event.kind))
+    return { ...event, kind: "presence", mode: "Presence during another participant's movement", position: route[0] };
+  return event;
+}
+export function getView(limit, step, characterId = "K", data = initial, layer = "journey") {
+  const safe = Number.isInteger(limit) && limit > 0 && limit <= 12 ? limit : 0;
+  const visibleCharacters = safe ? data.characters.filter(person => person.chapter <= safe) : [];
+  const selected = visibleCharacters.find(person => person.id === characterId);
+  const allowed = selected ? data.events.map(event => forParticipant(disclosedEvent(event, safe), selected)).filter(event => event.chapter <= safe && event.people.includes(characterId) &&
+    (layer === "all" || (layer === "journey" ? !["recollection", "plan", "spectral", "dream"].includes(event.kind) : event.kind === layer))) : [];
+  const index = Math.max(0, Math.min(Number.isFinite(step) ? Math.floor(step) : 0, allowed.length - 1));
+  const current = allowed[index] ?? null;
+  const route = current ? (current.routes?.[characterId] ?? (current.actors.includes(characterId) ? current.route : [])) : [];
+  const places = new Set([...route, ...(current?.places || [])]);
+  const visibleLocations = data.locations.filter(place => place.chapter <= safe && places.has(place.id))
+    .map(place => ({ ...place, notes: (place.notes || []).filter(note => note.chapter <= safe), reveal: index }));
+  const draw = current && !["plan", "dream", "presence", "failed ascent"].includes(current.kind) && route.length > 1 &&
+    route.every(id => visibleLocations.some(place => place.id === id && Number.isFinite(place.x) && Number.isFinite(place.z)));
+  const position = current && current.position !== null ? route.at(-1) ?? null : null;
+  return { events: allowed, index, current, characters: visibleCharacters, locations: visibleLocations,
+    traversed: current ? [current] : [], route, drawnRoute: draw ? route : [], position, selected,
+    chapters: safe ? data.chapters.filter(c => c.id <= safe) : [] };
 }

@@ -1,6 +1,6 @@
 # Tom’s Crossing — an unofficial fan atlas
 
-A chapter-based tabletop atlas of **Tom’s Crossing by Mark Z. Danielewski**. Explore a carved landscape, follow a character’s movements, and read a short journal alongside the map. The current atlas covers one character’s first three movements in Chapter One.
+A chapter-based tabletop atlas of **Tom’s Crossing by Mark Z. Danielewski**. Explore a carved landscape, follow a character’s movements, and read a short journal alongside the map. The current atlas covers the supplied movement data through part of Chapter Twelve, with separate character and companion journals. The final chapter remains partial.
 
 This is an independent fan interpretation, not an official map. It is not affiliated with, endorsed by, or sponsored by the author or publisher. The original novel and its characters and settings are © Mark Z. Danielewski. All rights reserved. The website contains original summaries and illustrative geometry, not excerpts from the novel or audiobook recordings.
 
@@ -10,40 +10,43 @@ The atlas is being built from one reader’s audiobook listening. Character and 
 
 Choose the chapter you’ve finished, then select a journal entry or use the previous/next buttons. Drag to orbit, **Shift-drag or right-drag to pan**, and scroll to zoom. On touch screens, use one finger to orbit and two fingers to pan or zoom. Keyboard users can focus the map and use arrows to rotate, Shift + arrows to pan, +/− to zoom, and Home to reset.
 
-The chapter menu supports arrows, Home/End, first-letter navigation, Enter/Space to confirm, and Escape to cancel. Exploring an option does not reveal its content until you confirm it. The character button hides or shows the route. Choosing “Before Chapter One” removes all story labels and journal entries. Every reload starts with this boundary closed.
+The chapter menu supports arrows, Home/End, first-letter navigation, Enter/Space to confirm, and Escape to cancel. Exploring an option does not reveal its content until you confirm it. Select a character or companion and a journal layer; the character button hides or shows the selected route. Earlier accounts, plans, spectral events and dreams remain distinct. Choosing “Before Chapter One” removes all story labels and journal entries. Every reload starts with this boundary closed.
 
 ## Run locally
 
-Requires Node.js 22.12 or later.
+Requires Node.js 22.12 or later and Make.
 
 ```sh
-npm ci
-npm run dev
+make setup
+make dev
 ```
 
-Open the URL printed by Vite. The map requires WebGL; the journal remains available if 3D rendering fails. There are no accounts, analytics, external fonts, or runtime content services.
+`make dev` opens your local browser and reloads changes as you edit. For a production preview with the site's CSP, use `make preview`; it rebuilds first and opens the browser. Both servers bind to localhost; stop them with Ctrl-C. Pass Vite options with, for example, `make dev ARGS="--port 5174"`. Run `make help` (or just `make`) for all targets. The existing npm commands remain available without Make.
+
+The map requires WebGL; the journal remains available if 3D rendering fails. There are no accounts, analytics, external fonts, or runtime content services.
 
 ```sh
-npm test
-npm run build
-npx playwright install chromium
-npm run test:browser
-npm run preview
+make check
+make browsers
+make test-browser
+make test-webkit
 ```
 
 Browser tests build and serve the production site under its intended Content Security Policy (CSP), including desktop and phone layouts. `PLAYWRIGHT_CHROMIUM_EXECUTABLE` can point to an existing Chromium executable when using a locally managed browser installation.
 
+Exhaustive checks derive their cases from the public chapter catalog and visit at most 20 entries per case. New content adds cases without expanding a single test's timeout. CI distributes Chromium/phone cases across four shards and WebKit cases across two; every shard must pass the required verification check. Chapter boundary cases visit newly disclosed entries, while participant cases cover every entry at the current maximum boundary.
+
 ## Interpretation and scope
 
-The board is schematic. Coordinates, elevation, decorative trees/buildings, distances, and precise path bends are artistic staging. Gold lines communicate journey order. The journal explains uncertainties. The pawn is a symbolic game piece, not a depiction of the character’s appearance.
+The board is schematic. Coordinates, elevation, decorative trees/buildings, distances, and precise path bends are artistic staging. Lines communicate the selected entry's narrated order; separate recollections and spectral events use distinct colors. Plans and dreams do not draw completed paths. The journal explains uncertainties. The pawn is a symbolic game piece, not a depiction of the character’s appearance.
 
-`src/story.js` contains only reviewed, reader-facing chapter data. Private research, transcripts, timing references, and working notes must remain outside published source and production assets. The root scratch files and private evidence notes are ignored; `npm test` checks that they are absent from the public candidate file set, including accidentally staged files. Do not force-add ignored research files.
+`src/chapters/` contains reviewed, reader-facing paraphrases in separate chapter payloads. `src/story.js` projects only the selected disclosure boundary; `src/chapters.js` loads payloads after explicit chapter selection. Private research, transcripts, timing references, and working notes must remain outside published source and production assets. The root scratch files and private evidence notes are ignored; `npm test` checks that they are absent from the public candidate file set, including accidentally staged files. Do not force-add ignored research files.
 
 ## Updating the atlas as you read
 
 Copy the current `movements.md` and `metadata.json` into the repository root, then ask an agent to update from those two files using [the repo skill](skills/update-atlas/SKILL.md). They remain private and ignored. **No other book sources are authorized**, including linked transcripts, other repositories, or web research.
 
-`npm run atlas:check` compares the local snapshot with reviewed coverage. When everything is accounted for, the agent stops without editing the site or regenerating assets. New rows, corrections, changed scope, and partial/blocked work are reported separately. The current three-movement sample is not complete coverage of the supplied source.
+`npm run atlas:check` compares the local snapshot with reviewed coverage. When everything is accounted for, the agent stops without editing the site or regenerating assets. New rows, corrections, changed scope, and partial/blocked work are reported separately. A reviewed snapshot covers the supplied claims, including their stated uncertainty; it does not certify missing information or completion of the partial final chapter.
 
 See [the source-update guide](docs/source-updates.md) for commands and the append/correction workflow. Public CI uses synthetic fixtures and never needs the private source files.
 

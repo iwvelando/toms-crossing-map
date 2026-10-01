@@ -70,7 +70,7 @@ If an updated source intentionally removes/renames an item, review the previous 
 
 Metadata is mandatory for synchronization. Validate local-only provenance, identity, snapshot mode, finite intervals, and the listening buffer. The tool checks the supported fields; the agent must also compare the ledger's scope and referenced chapter/track intervals to that metadata. A newer endpoint does not make inferred or unheard trailing material valid. An old/missing/contradictory metadata file is a blocker. When the input format changes, adapt the parser and synthetic tests deliberately; never omit unreadable sections to get a green result.
 
-The adapter in `scripts/atlas-projection.mjs` reads the current singleton chapter export and public arrays. Update it when the application gains a chapters array or split chapter payloads. Extend target collections/validation if a new public concept cannot be expressed by the existing collections. Do not bypass receipts to accommodate a new data shape.
+The development-only adapter in `scripts/atlas-projection.mjs` combines all reviewed chapter payloads and public arrays. Keep it aligned with the application's payload structure. Extend target collections/validation if a new public concept cannot be expressed by the existing collections. Do not bypass receipts to accommodate a new data shape.
 
 ## Verification without private sources
 

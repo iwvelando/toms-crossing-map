@@ -3,8 +3,20 @@ export function createChapterPicker(root, onChange) {
   const trigger = root.querySelector('[role="combobox"]');
   const valueLabel = root.querySelector("#chapter-limit-value");
   const list = root.querySelector('[role="listbox"]');
-  const options = [...list.querySelectorAll('[role="option"]')];
-  const labels = ["Before Chapter One", "Chapter One · Paddock B"];
+  const words = ["One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve"];
+  list.replaceChildren();
+  const labels = ["Before Chapter One", ...words.map((word, i) => `Chapter ${word}${i === 11 ? " · partial" : ""}`)];
+  const options = labels.map((label, index) => {
+    const option = document.createElement("li");
+    option.id = `chapter-option-${index}`;
+    option.setAttribute("role", "option");
+    option.dataset.value = index;
+    const text = document.createElement("span");
+    text.textContent = label;
+    option.append(text);
+    list.append(option);
+    return option;
+  });
   let selected = 0;
   let active = 0;
 
@@ -30,7 +42,12 @@ export function createChapterPicker(root, onChange) {
     trigger.focus({ preventScroll: true });
     onChange(Number(options[index].dataset.value));
   }
-  function setValue(value) {
+  function setValue(value, chapters = []) {
+    options.forEach((option, i) => {
+      const chapter = chapters.find(chapter => chapter.id === i);
+      labels[i] = i === 0 ? "Before Chapter One" : `Chapter ${words[i - 1]}${chapter ? " · " + chapter.title : ""}${i === 12 ? " · partial" : ""}`;
+      option.firstChild.textContent = labels[i];
+    });
     selected = options.findIndex(
       (option) => Number(option.dataset.value) === value,
     );

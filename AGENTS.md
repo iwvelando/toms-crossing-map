@@ -1,6 +1,6 @@
 # Tom’s Crossing — an unofficial fan atlas
 
-A small static Three.js atlas of Mark Z. Danielewski’s novel. Preserve the carved tabletop design and the journal’s careful distinction between narrated relationships and illustrative geography. The app currently covers one character’s first three movements in Chapter One.
+A small static Three.js atlas of Mark Z. Danielewski’s novel. Preserve the carved tabletop design and the journal’s careful distinction between narrated relationships and illustrative geography. The app covers supplied movements through part of Chapter Twelve, with separate character/companion journals and chapter payloads. The final chapter remains partial.
 
 ## Book sources and repeatable updates
 

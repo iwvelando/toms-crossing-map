@@ -255,6 +255,7 @@ test("CLI is source-local, append-aware, and does not write an up-to-date tree",
       join(dir, "src/story.js"),
       'export const chapter={id:1}; export const characters=[]; export const locations=[]; export const events=[{id:"garden"}];',
     );
+    await writeFile(join(dir, "src/chapters.js"), 'export const maximumChapter=1; export async function loadThrough(){return {chapters:[{id:1}],characters:[],locations:[],events:[{id:"garden"}]};}');
     await writeFile(join(dir, "movements.md"), source);
     await writeFile(join(dir, "metadata.json"), JSON.stringify(metadata));
     await writeFile(
