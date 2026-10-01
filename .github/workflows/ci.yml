@@ -80,6 +80,10 @@ jobs:
     if: ${{ !cancelled() && needs.reuse.outputs.run-id == '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -90,11 +94,11 @@ jobs:
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       # Runs against the production build in dist/, under the production CSP.
-      - run: npx playwright test
+      - run: npx playwright test --shard=${{ matrix.shard }}/4
       - if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: chromium-test-results
+          name: chromium-test-results-${{ matrix.shard }}
           path: test-results/
           if-no-files-found: ignore
           retention-days: 7
@@ -105,6 +109,10 @@ jobs:
     if: ${{ !cancelled() && needs.reuse.outputs.run-id == '' }}
     runs-on: macos-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -113,7 +121,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install webkit
-      - run: npm run test:webkit
+      - run: npm run test:webkit -- --shard=${{ matrix.shard }}/2
       # Preserve browser crash reports when WebKit fails.
       - if: failure()
         run: |
@@ -126,7 +134,7 @@ jobs:
       - if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: webkit-test-results
+          name: webkit-test-results-${{ matrix.shard }}
           path: test-results/
           if-no-files-found: ignore
           retention-days: 7

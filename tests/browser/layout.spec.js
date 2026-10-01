@@ -1,8 +1,10 @@
 import { test, expect } from "@playwright/test";
-test("all atlas states fit and work on a narrow screen", async ({ page }, testInfo) => {
-  test.setTimeout(240000);
+import { chapterCases } from "../helpers/atlas-cases.mjs";
+import { checkOverflow, openChapter, visitEntries } from "./atlas-journey.js";
+
+test("chapter controls and journal fit a narrow screen", async ({ page }, testInfo) => {
   await page.goto("/");
-  const overflow = async () => expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
+  const overflow = () => checkOverflow(page);
   await overflow();
   await page.locator("#chapter-limit").click();
   const box = await page.getByRole("listbox").boundingBox();
@@ -19,29 +21,6 @@ test("all atlas states fit and work on a narrow screen", async ({ page }, testIn
     await page.screenshot({ path: `test-results/${testInfo.project.name}-movement-${i}.png`, fullPage: true });
     if (i < 2) await page.getByRole("button", { name: "Next movement" }).click();
   }
-  for (let chapter = 2; chapter <= 12; chapter++) {
-    await page.locator("#chapter-limit").click();
-    await page.locator(`#chapter-option-${chapter}`).click();
-    await expect(page.locator("#load-status")).toHaveText("");
-    const entries = page.locator(".entry-button");
-    for (let i = 0; i < await entries.count(); i++) {
-      await entries.nth(i).click();
-      await overflow();
-    }
-    await page.screenshot({ path: `test-results/${testInfo.project.name}-chapter-${chapter}.png`, fullPage: true });
-  }
-  if (testInfo.project.name !== "chromium") {
-    const people = await page.locator("#character-select option").evaluateAll(options => options.map(option => option.value));
-    for (const id of people) {
-      await page.locator("#character-select").selectOption(id);
-      const entries = page.locator(".entry-button");
-      for (let i = 0; i < await entries.count(); i++) {
-        await entries.nth(i).click();
-        await expect(page.locator("#entry-detail h3")).not.toBeEmpty();
-        await overflow();
-      }
-    }
-  }
   await page.locator("#character").click();
   await overflow();
   await page.locator("#about-button").click();
@@ -51,3 +30,12 @@ test("all atlas states fit and work on a narrow screen", async ({ page }, testIn
   await page.reload();
   await expect(page.locator("#locked-state")).toBeVisible();
 });
+
+for (const { chapter, batch, steps } of chapterCases) {
+  test(`chapter ${chapter} layout batch ${batch + 1} fits the screen`, async ({ page }, testInfo) => {
+    test.setTimeout(120000);
+    await openChapter(page, chapter);
+    await visitEntries(page, steps, () => checkOverflow(page));
+    await page.screenshot({ path: `test-results/${testInfo.project.name}-chapter-${chapter}-batch-${batch + 1}.png`, fullPage: true });
+  });
+}

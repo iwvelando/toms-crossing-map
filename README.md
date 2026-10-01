@@ -34,6 +34,8 @@ make test-webkit
 
 Browser tests build and serve the production site under its intended Content Security Policy (CSP), including desktop and phone layouts. `PLAYWRIGHT_CHROMIUM_EXECUTABLE` can point to an existing Chromium executable when using a locally managed browser installation.
 
+Exhaustive checks derive their cases from the public chapter catalog and visit at most 20 entries per case. New content adds cases without expanding a single test's timeout. CI distributes Chromium/phone cases across four shards and WebKit cases across two; every shard must pass the required verification check. Chapter boundary cases visit newly disclosed entries, while participant cases cover every entry at the current maximum boundary.
+
 ## Interpretation and scope
 
 The board is schematic. Coordinates, elevation, decorative trees/buildings, distances, and precise path bends are artistic staging. Lines communicate the selected entry's narrated order; separate recollections and spectral events use distinct colors. Plans and dreams do not draw completed paths. The journal explains uncertainties. The pawn is a symbolic game piece, not a depiction of the character’s appearance.
