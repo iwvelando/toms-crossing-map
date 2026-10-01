@@ -3,7 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#242c26" />
+    <meta name="theme-color" content="#0b1522" />
+    <script src="/theme-init.js"></script>
     <meta
       name="description"
       content="An unofficial fan atlas of Tom’s Crossing by Mark Z. Danielewski. Explore character journeys on an imagined tabletop map, chapter by chapter."
@@ -85,6 +86,10 @@
             </ul>
           </div>
         </div>
+        <div class="theme-controls" role="group" aria-label="Color theme">
+          <button id="theme-toggle" aria-label="Dark theme" aria-pressed="false">☀ Light</button>
+          <button id="theme-system" aria-label="Use system theme" title="Follow the system theme">Auto</button>
+        </div>
         <button class="quiet-button" id="about-button">
           About the map <span aria-hidden="true">↗</span>
         </button>
@@ -113,6 +118,7 @@
             >
               ▱</button
             ><button id="reset-view" aria-label="Reset map view">⟲</button>
+            <button id="expand-map" aria-label="Expand map width" aria-pressed="false">↔</button>
           </div>
           <div class="map-key">
             <span class="key-line"></span><span>Selected entry</span
@@ -153,6 +159,15 @@
             </p>
           </div>
           <div id="unlocked-state" hidden>
+            <label class="journal-control">Map view<select id="map-mode"><option value="entry">Selected journal entry</option><option value="chapter">Compare paths in this chapter</option></select></label>
+            <label class="journal-control">Journal layer<select id="layer-select"><option value="journey">Journey and presence</option><option value="recollection">Earlier / reported recollections</option><option value="plan">Plans and rejected options</option><option value="spectral">Spectral / extraordinary events</option><option value="dream">Dreams</option><option value="all">All disclosed entries</option></select></label>
+            <section id="comparison" aria-label="Chapter path selection" hidden>
+              <div class="comparison-actions"><button id="show-all">Show everyone</button><button id="show-none">Clear selection</button></div>
+              <label class="path-character"><input type="checkbox" id="show-locations" />Show location names on the board</label>
+              <p id="comparison-status" role="status"></p>
+              <div id="path-characters"></div>
+              <p class="small-copy">Paths cover only this chapter and layer. Pieces mark each participant’s last located entry, not simultaneous or continuous presence. Plans and dreams never draw completed travel.</p>
+            </section>
             <div class="character-row">
               <button
                 id="character"
@@ -168,8 +183,8 @@
               </button>
             </div>
             <label class="journal-control">Character or companion<select id="character-select"></select></label>
-            <label class="journal-control">Journal layer<select id="layer-select"><option value="journey">Journey and presence</option><option value="recollection">Earlier / reported recollections</option><option value="plan">Plans and rejected options</option><option value="spectral">Spectral / extraordinary events</option><option value="dream">Dreams</option><option value="all">All disclosed entries</option></select></label>
-            <p id="empty-state" hidden>No entries in this layer. Choose another layer or character.</p>
+            <p id="layer-status" role="status"></p>
+            <p id="empty-state" hidden>No entries in this layer. Choose a character with entries above, or another layer.</p>
             <div class="chapter-heading">
               <span class="eyebrow"></span>
               <h2></h2>
@@ -231,7 +246,7 @@
       </p>
       <p>
         The carved hills, vegetation, buildings, distances, and bends are
-        imagined scenery. Gold lines show the order of a journey, not a surveyed
+        imagined scenery. Colored lines show the order of a journey, not a surveyed
         trail. Journal notes explain where the geography is uncertain.
       </p>
       <p>
@@ -241,8 +256,8 @@
       </p>
       <p>
         The atlas covers disclosed movements through part of Chapter Twelve.
-        The final chapter is partial. Reading limits reset on reload; select only
-        a chapter you have reached. Historical accounts, plans, dreams and
+        The final chapter is partial. Your reading limit and selections are saved
+        in this browser; select only a chapter you have reached. Historical accounts, plans, dreams and
         spectral events have separate journal layers. A last observation does
         not imply continuous presence afterward.
       </p>

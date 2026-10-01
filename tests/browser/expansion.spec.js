@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { chapterCases, participantCases, latestChapter, latestChapterIsPartial, visibleCharacterCount } from "../helpers/atlas-cases.mjs";
 import { openChapter, visitEntries } from "./atlas-journey.js";
 
-test("later payloads load only on selection; cached content retracts", async ({ page }) => {
+test("fresh boundaries ignore URLs; committed and restored content stays bounded", async ({ page }) => {
   const chapters = new Set();
   page.on("request", request => {
     const match = request.url().match(/chapter-(\d+)/);
@@ -31,9 +31,8 @@ test("later payloads load only on selection; cached content retracts", async ({ 
   expect(await page.locator("#character-select").innerText()).not.toEqual(laterPeople);
   await expect(page.locator(`#chapter-option-${latestChapter}`)).toHaveText(closedLastLabel);
   await page.reload();
-  await expect(page.locator("#locked-state")).toBeVisible();
-  await expect(page.locator("#character-select option")).toHaveCount(0);
-  await expect(page.locator("#entry-detail")).toBeEmpty();
+  await expect(page.locator("#entry-detail h3")).toHaveText("Leaving home");
+  expect(await page.locator("#character-select").innerText()).not.toEqual(laterPeople);
 });
 
 for (const { chapter, batch, steps } of chapterCases) {

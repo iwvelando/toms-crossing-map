@@ -28,7 +28,8 @@ test("chapter controls and journal fit a narrow screen", async ({ page }, testIn
   await overflow();
   await page.locator("#close-about").click();
   await page.reload();
-  await expect(page.locator("#locked-state")).toBeVisible();
+  await expect(page.locator("#unlocked-state")).toBeVisible();
+  await expect(page.locator("#character")).toHaveAttribute("aria-pressed", "false");
 });
 
 for (const { chapter, batch, steps } of chapterCases) {

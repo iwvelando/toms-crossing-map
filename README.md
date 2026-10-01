@@ -8,9 +8,15 @@ The atlas is being built from one reader’s audiobook listening. Character and 
 
 ## Explore
 
+[Open the deployed atlas](https://toms-crossing-map.isaacvelando.com/).
+
 Choose the chapter you’ve finished, then select a journal entry or use the previous/next buttons. Drag to orbit, **Shift-drag or right-drag to pan**, and scroll to zoom. On touch screens, use one finger to orbit and two fingers to pan or zoom. Keyboard users can focus the map and use arrows to rotate, Shift + arrows to pan, +/− to zoom, and Home to reset.
 
-The chapter menu supports arrows, Home/End, first-letter navigation, Enter/Space to confirm, and Escape to cancel. Exploring an option does not reveal its content until you confirm it. Select a character or companion and a journal layer; the character button hides or shows the selected route. Earlier accounts, plans, spectral events and dreams remain distinct. Choosing “Before Chapter One” removes all story labels and journal entries. Every reload starts with this boundary closed.
+The chapter menu supports arrows, Home/End, first-letter navigation, Enter/Space to confirm, and Escape to cancel. Exploring an option does not reveal its content until you confirm it. Select a journal layer, then a character or companion. Character options show entry counts and put matching people first; selecting Dreams takes you directly to a participant with dream entries. The character button hides or shows the selected entry’s route. Earlier accounts, plans, spectral events and dreams remain distinct. Choosing “Before Chapter One” removes all story labels and journal entries. The reading limit, selected character and entry, journal layer, comparison choices, location-label setting, board layout, map camera and journal disclosure panel are saved in this browser and restored automatically on reload. A new browser or invalid saved state starts before Chapter One. Selecting “Before Chapter One” also saves the closed boundary. URL parameters cannot advance it.
+
+Choose **Compare paths in this chapter** to select any set of participants, or use **Show everyone**. Comparison covers only the chapter at the reading limit and the chosen layer. Matching route colors, distinct piece shapes, and numbered badges identify participants; the scrollable board legend opens their journals; hover or focus a legend item to highlight its paths. Location names are optional in comparison. Use **Expand map width** for a wider board. Pieces mark each participant’s last located entry in that chapter, which does not imply simultaneous or continuous presence. The dark, starry setting and taller carved mountain ranges remain illustrative.
+
+The theme follows your system by default. Use the **Light / Dark** button to switch and save a preference, or **Auto** to follow the system again. Both the interface and the tabletop lighting change with the theme. Blocked or full local storage leaves the atlas usable for the current visit.
 
 ## Run locally
 
@@ -38,7 +44,7 @@ Exhaustive checks derive their cases from the public chapter catalog and visit a
 
 ## Interpretation and scope
 
-The board is schematic. Coordinates, elevation, decorative trees/buildings, distances, and precise path bends are artistic staging. Lines communicate the selected entry's narrated order; separate recollections and spectral events use distinct colors. Plans and dreams do not draw completed paths. The journal explains uncertainties. The pawn is a symbolic game piece, not a depiction of the character’s appearance.
+The board is schematic. Coordinates, elevation, decorative trees/buildings, distances, and precise path bends are artistic staging. Lines communicate narrated order within each separate entry; colors identify participants, while the journal states each entry’s classification. Plans and dreams do not draw completed paths. The journal explains uncertainties. Numbered pieces use individual colors and five abstract shapes, with the numbers distinguishing larger casts. They are symbolic game pieces, not depictions of characters’ appearances.
 
 `src/chapters/` contains reviewed, reader-facing paraphrases in separate chapter payloads. `src/story.js` projects only the selected disclosure boundary; `src/chapters.js` loads payloads after explicit chapter selection. Private research, transcripts, timing references, and working notes must remain outside published source and production assets. The root scratch files and private evidence notes are ignored; `npm test` checks that they are absent from the public candidate file set, including accidentally staged files. Do not force-add ignored research files.
 

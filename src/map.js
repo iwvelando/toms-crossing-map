@@ -1,10 +1,11 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { pieceStyle } from "./pieces.js";
 
 const palette = {
-  ground: 0x7f8b63,
-  wood: 0x463a28,
+  ground: 0x40515b,
+  wood: 0x302c29,
   trim: 0xc2a16b,
   gold: 0xe9b754,
 };
@@ -18,7 +19,7 @@ function inPolygon(x, z, vertices) {
   }
   return inside;
 }
-export function createMap(container, labelRoot, onSelect) {
+export function createMap(container, labelRoot, onSelect, onViewChange) {
   const scene = new THREE.Scene();
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   let renderPending = false;
@@ -52,8 +53,9 @@ export function createMap(container, labelRoot, onSelect) {
     requestRender();
   }
   reset();
-  scene.add(new THREE.HemisphereLight(0xf6f0da, 0x546846, 2.6));
-  const sun = new THREE.DirectionalLight(0xffedca, 3.7);
+  const ambient = new THREE.HemisphereLight(0xc7dffa, 0x384450, 2.4);
+  scene.add(ambient);
+  const sun = new THREE.DirectionalLight(0xd4e5fa, 3.4);
   sun.position.set(-18, 30, 12);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
@@ -77,7 +79,7 @@ export function createMap(container, labelRoot, onSelect) {
     ground: mat(palette.ground),
     wood: mat(palette.wood),
     trim: mat(palette.trim, { metalness: 0.25 }),
-    tree: mat(0x465b38),
+    tree: mat(0x334e49),
     trunk: mat(0x5d4a30),
     stone: mat(0x8c947b),
     house: mat(0xd6c7a3),
@@ -113,9 +115,11 @@ export function createMap(container, labelRoot, onSelect) {
   }
   const tiers = [];
   const terrainColors = [
-    0x87926a, 0x929973, 0x9ba07c, 0xa8aa84, 0xb2b08d, 0xbcb795, 0xc8c0a1,
-    0xd3c8ac, 0xdfd3b9,
+    0x4c5b63, 0x586670, 0x63727d, 0x6f7d87, 0x7b8890, 0x89949c, 0x97a2a7,
+    0xaab4b8, 0xc4cbd0,
   ];
+  const terrainMaterials = terrainColors.map(color => mat(color));
+  const terrainEdgeMaterial = new THREE.LineBasicMaterial({ color: 0x283b4b, transparent: true, opacity: 0.32 });
   for (let layer = 0; layer < 9; layer++) {
     const scale = Math.pow(0.84, layer);
     const vertices = Array.from({ length: 84 }, (_, i) => {
@@ -135,30 +139,45 @@ export function createMap(container, labelRoot, onSelect) {
     );
     shape.closePath();
     const geometry = new THREE.ExtrudeGeometry(shape, {
-      depth: 0.31,
+      depth: 0.52,
       bevelEnabled: false,
     });
     geometry.rotateX(-Math.PI / 2);
-    mesh(geometry, mat(terrainColors[layer]), 0, 0.1 + layer * 0.31, 0);
+    mesh(geometry, terrainMaterials[layer], 0, 0.1 + layer * 0.52, 0);
     const edgePoints = vertices.map(
-      ([x, z]) => new THREE.Vector3(x, 0.105 + (layer + 1) * 0.31, z),
+      ([x, z]) => new THREE.Vector3(x, 0.105 + (layer + 1) * 0.52, z),
     );
     edgePoints.push(edgePoints[0]);
     scene.add(
       new THREE.Line(
         new THREE.BufferGeometry().setFromPoints(edgePoints),
-        new THREE.LineBasicMaterial({
-          color: 0x646c49,
-          transparent: true,
-          opacity: 0.32,
-        }),
+        terrainEdgeMaterial,
       ),
     );
-    tiers.push(vertices);
+    tiers.push({ vertices, top: 0.1 + (layer + 1) * 0.52 });
+  }
+  // Additional carved ranges are decorative, not asserted geography.
+  for (const [cx, cz, rx, rz] of [[-10, -6, 5, 4], [9, 6, 5, 3]]) {
+    for (let tier = 0; tier < 7; tier++) {
+      const scale = Math.pow(0.78, tier);
+      const vertices = Array.from({ length: 48 }, (_, i) => {
+        const angle = i / 48 * Math.PI * 2;
+        const wave = 1 + 0.12 * Math.sin(angle * 5);
+        return [cx + Math.cos(angle) * rx * scale * wave, cz + Math.sin(angle) * rz * scale * wave];
+      });
+      const shape = new THREE.Shape();
+      vertices.forEach(([x, z], i) => i ? shape.lineTo(x, -z) : shape.moveTo(x, -z));
+      shape.closePath();
+      const geometry = new THREE.ExtrudeGeometry(shape, { depth: 0.65, bevelEnabled: false });
+      geometry.rotateX(-Math.PI / 2);
+      mesh(geometry, terrainMaterials[tier + 1], 0, 0.1 + tier * 0.65, 0);
+      tiers.push({ vertices, top: 0.1 + (tier + 1) * 0.65 });
+    }
   }
   function elevation(x, z) {
     let h = 0.1;
-    for (const polygon of tiers) if (inPolygon(x, z, polygon)) h += 0.31;
+    for (const tier of tiers) if (inPolygon(x, z, tier.vertices)) h = Math.max(h, tier.top ?? 0.1);
+    // Ranges may overlap the main massif; take the highest carved surface.
     return h;
   }
   // Seeded decorative vegetation; these are not asserted story locations.
@@ -220,6 +239,7 @@ export function createMap(container, labelRoot, onSelect) {
   const pawnRoot = new THREE.Group();
   scene.add(pawnRoot);
   pawnRoot.visible = false;
+  const pawnTemplate = new THREE.Group();
   const brass = mat(palette.gold, { metalness: 0.65, roughness: 0.28 });
   // Immediate lightweight fallback also survives an unavailable asset.
   mesh(
@@ -228,15 +248,15 @@ export function createMap(container, labelRoot, onSelect) {
     0,
     0.08,
     0,
-    pawnRoot,
+    pawnTemplate,
   );
-  mesh(new THREE.ConeGeometry(0.28, 0.8, 24), brass, 0, 0.52, 0, pawnRoot);
-  mesh(new THREE.SphereGeometry(0.23, 24, 16), brass, 0, 1.0, 0, pawnRoot);
+  mesh(new THREE.ConeGeometry(0.28, 0.8, 24), brass, 0, 0.52, 0, pawnTemplate);
+  mesh(new THREE.SphereGeometry(0.23, 24, 16), brass, 0, 1.0, 0, pawnTemplate);
   new GLTFLoader().load(
     `${import.meta.env.BASE_URL}models/kalin-pawn.glb`,
     (gltf) => {
-      clearGroup(pawnRoot);
-      pawnRoot.add(gltf.scene);
+      clearGroup(pawnTemplate);
+      pawnTemplate.add(gltf.scene);
       gltf.scene.traverse((object) => {
         if (object.isMesh) {
           object.castShadow = true;
@@ -244,6 +264,7 @@ export function createMap(container, labelRoot, onSelect) {
         }
       });
       container.dataset.asset = "loaded";
+      if (currentView) update(currentView, currentShowCharacter, currentOverview);
       requestRender();
     },
     undefined,
@@ -307,6 +328,7 @@ export function createMap(container, labelRoot, onSelect) {
   }
   let labelItems = [],
     currentView = null;
+  let currentOverview = null, currentShowCharacter = true;
   const routePaths = {
     "leaving-home": [
       [-10, 5],
@@ -334,107 +356,122 @@ export function createMap(container, labelRoot, onSelect) {
       [8, -4.5],
     ],
   };
-  const pathMaterials = [
-    mat(0x96733e),
-    mat(palette.gold, { emissive: 0x8e601e, emissiveIntensity: 0.12 }),
-  ];
-  function update(view, showCharacter = true) {
-    const kind = view.current?.kind;
-    const color = kind === "recollection" ? 0x708d8a : kind === "spectral" ? 0x9a80bd : kind === "bodily relocation" ? 0x8d715e : palette.gold;
-    pathMaterials[1].color.setHex(color);
-    brass.color.setHex(color);
+  const identityMaterials = new Map();
+  function identityMaterial(id, characters) {
+    if (!identityMaterials.has(id)) identityMaterials.set(id, mat(pieceStyle(id, characters).color, { metalness: 0.35, roughness: 0.4, emissive: pieceStyle(id, characters).color, emissiveIntensity: 0.15 }));
+    return identityMaterials.get(id);
+  }
+  function addPiece(entry, characters, offset, labeled) {
+    const place = entry.locations.find(place => place.id === entry.position && Number.isFinite(place.x) && Number.isFinite(place.z));
+    if (!place) return false;
+    const identity = pieceStyle(entry.selected.id, characters);
+    const material = identityMaterial(entry.selected.id, characters);
+    const root = new THREE.Group();
+    root.userData = { index: entry.index, characterId: entry.selected.id };
+    pawnRoot.add(root);
+    const x = place.x + offset[0], z = place.z + offset[1];
+    root.position.set(x, elevation(x, z) + 0.12, z);
+    if (identity.shape === "orb") {
+      const model = pawnTemplate.clone(true);
+      model.traverse(object => {
+        if (object.isMesh) { object.geometry = object.geometry.clone(); object.material = material; }
+      });
+      root.add(model);
+    } else {
+      mesh(new THREE.CylinderGeometry(0.3, 0.44, 0.18, 24), material, 0, 0.09, 0, root);
+      mesh(new THREE.ConeGeometry(0.25, 0.8, 16), material, 0, 0.55, 0, root);
+      const head = identity.shape === "diamond" ? new THREE.OctahedronGeometry(0.31) :
+        identity.shape === "spire" ? new THREE.ConeGeometry(0.24, 0.5, 5) :
+        identity.shape === "cube" ? new THREE.BoxGeometry(0.4, 0.4, 0.4) : new THREE.TorusGeometry(0.23, 0.085, 8, 20);
+      mesh(head, material, 0, 1.03, 0, root);
+    }
+    if (!labeled) return true;
+    const button = document.createElement("button");
+    button.className = "map-label piece-label";
+    button.dataset.character = entry.selected.id;
+    button.style.setProperty("--piece-color", identity.color);
+    button.setAttribute("aria-label", `${entry.selected.name}, piece ${identity.number}, show last located entry`);
+    button.onclick = () => onSelect(entry.index, entry.selected.id);
+    labelRoot.append(button);
+    labelItems.push({ element: button, name: String(identity.number), number: identity.number, point: new THREE.Vector3(x, root.position.y + 1.55, z) });
+    return true;
+  }
+  function update(view, showCharacter = true, overview = null) {
+    highlight(null);
     requestRender();
-    currentView = view;
-    clearGroup(journey);
-    clearGroup(landmarks);
-    labelRoot.replaceChildren();
-    labelItems = [];
-    pawnRoot.visible = false;
+    currentView = view; currentOverview = overview; currentShowCharacter = showCharacter;
+    clearGroup(journey); clearGroup(landmarks); clearGroup(pawnRoot);
+    labelRoot.replaceChildren(); labelItems = [];
+    pawnRoot.visible = Boolean(overview) || showCharacter;
+    const entries = overview ? overview.entries : showCharacter && view.current ? [view] : [];
+    const locations = overview ? overview.locations : view.locations;
+    container.dataset.mode = overview ? "chapter" : "entry";
     container.dataset.event = view.current?.id || "";
-    container.dataset.route = view.drawnRoute.join(",");
-    container.dataset.kind = view.current?.kind || "";
-    container.dataset.position = view.position || "";
-    for (const place of view.locations) {
+    container.dataset.route = entries.flatMap(entry => entry.drawnRoute).join(",");
+    container.dataset.kind = overview ? "comparison" : view.current?.kind || "";
+    container.dataset.position = overview ? "" : view.position || "";
+    for (const place of locations) {
       if (!Number.isFinite(place.x) || !Number.isFinite(place.z)) continue;
       const y = elevation(place.x, place.z);
-      mesh(
-        new THREE.CylinderGeometry(0.2, 0.2, 0.09, 28),
-        markerMaterial,
-        place.x,
-        y + 0.055,
-        place.z,
-        landmarks,
-      );
+      mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.09, 28), markerMaterial, place.x, y + 0.055, place.z, landmarks);
       if (place.id === "HOME-A") building(place.x - 0.55, place.z - 0.65);
       if (place.id === "PAD-B") paddock(place.x, place.z);
+      if (overview && !overview.showLocations) continue;
       const button = document.createElement("button");
       button.className = "map-label";
       button.textContent = place.name;
       button.setAttribute("aria-label", `${place.name}, show movement`);
-      button.onclick = () => onSelect(place.reveal);
-      if (place.id === view.position)
-        button.classList.add("active");
+      button.onclick = () => onSelect(place.reveal, place.characterId);
+      if (!overview && place.id === view.position) button.classList.add("active");
       labelRoot.append(button);
-      labelItems.push({
-        element: button,
-        name: place.name,
-        number: labelItems.length + 1,
-        point: new THREE.Vector3(place.x, y + 1.1, place.z),
-      });
+      labelItems.push({ element: button, name: place.name, number: labelItems.length + 1, point: new THREE.Vector3(place.x, y + 1.1, place.z) });
     }
-    if (!view.current) return;
-    if (showCharacter)
-      for (const event of view.traversed) {
-        if (view.drawnRoute.length < 2) continue;
-        const points = routePaths[event.id] || view.drawnRoute.map(id => {
-          const place = view.locations.find(place => place.id === id);
-          return [place.x, place.z];
-        });
-        const sampled = [];
-        for (let i = 1; i < points.length; i++) {
-          const [ax, az] = points[i - 1],
-            [bx, bz] = points[i];
-          for (let j = 0; j < 14; j++) {
-            const t = j / 14,
-              x = ax + (bx - ax) * t,
-              z = az + (bz - az) * t;
-            sampled.push(new THREE.Vector3(x, elevation(x, z) + 0.19, z));
-          }
-        }
-        const [x, z] = points.at(-1);
-        sampled.push(new THREE.Vector3(x, elevation(x, z) + 0.19, z));
-        const curve = new THREE.CatmullRomCurve3(sampled, false, "centripetal");
-        mesh(
-          new THREE.TubeGeometry(curve, sampled.length * 2, 0.052, 6, false),
-          pathMaterials[Number(event.id === view.current.id)],
-          0,
-          0,
-          0,
-          journey,
-        );
-        // Small route beads imply sequence, without pretending to be surveyed trails.
-        for (let i = 8; i < sampled.length; i += 14) {
-          const p = sampled[i];
-          mesh(
-            new THREE.SphereGeometry(0.085, 8, 6),
-            markerMaterial,
-            p.x,
-            p.y + 0.02,
-            p.z,
-            journey,
-          );
+    // Separate entries never imply a continuous connection between observations.
+    entries.forEach((entry, lane) => {
+      if (entry.drawnRoute.length < 2) return;
+      const event = entry.current;
+      // Artistic bends are only valid for the original actor's full route.
+      const points = event.actors.includes(entry.selected.id) && entry.drawnRoute.join() === event.route.join() && routePaths[event.id] || entry.drawnRoute.map(id => {
+        const place = entry.locations.find(place => place.id === id);
+        return [place.x, place.z];
+      });
+      const sampled = [];
+      for (let i = 1; i < points.length; i++) {
+        const [ax, az] = points[i - 1], [bx, bz] = points[i];
+        const segments = Math.max(14, Math.ceil(Math.hypot(bx - ax, bz - az) * 8));
+        for (let j = 0; j < segments; j++) {
+          const t = j / segments, x = ax + (bx - ax) * t, z = az + (bz - az) * t;
+          sampled.push(new THREE.Vector3(x, elevation(x, z) + 0.25 + (overview ? lane % 8 * 0.06 : 0), z));
         }
       }
-    const destination = view.locations.find(
-      (place) => place.id === view.position && Number.isFinite(place.x) && Number.isFinite(place.z),
-    );
-    if (!destination) return;
-    pawnRoot.visible = showCharacter;
-    pawnRoot.position.set(
-      destination.x,
-      elevation(destination.x, destination.z) + 0.12,
-      destination.z,
-    );
+      const [x, z] = points.at(-1);
+      sampled.push(new THREE.Vector3(x, elevation(x, z) + 0.25 + (overview ? lane % 8 * 0.06 : 0), z));
+      const curve = new THREE.CatmullRomCurve3(sampled, false, "centripetal");
+      mesh(new THREE.TubeGeometry(curve, sampled.length * 2, overview ? 0.07 : 0.06, 6, false), identityMaterial(entry.selected.id, view.characters), 0, 0, 0, journey);
+    });
+    const lastLocated = new Map();
+    for (const entry of entries) if (entry.locations.some(place => place.id === entry.position && Number.isFinite(place.x) && Number.isFinite(place.z))) lastLocated.set(entry.selected.id, entry);
+    const groups = new Map();
+    for (const entry of lastLocated.values()) {
+      if (!groups.has(entry.position)) groups.set(entry.position, []);
+      groups.get(entry.position).push(entry);
+    }
+    let pieces = 0;
+    for (const group of groups.values()) group.forEach((entry, index) => {
+      const angle = index / group.length * Math.PI * 2;
+      const radius = group.length > 1 ? 0.6 + group.length * 0.06 : 0;
+      if (addPiece(entry, view.characters, [Math.cos(angle) * radius, Math.sin(angle) * radius], Boolean(overview))) pieces++;
+    });
+    container.dataset.pieces = String(pieces);
+  }
+  function highlight(characterId) {
+    for (const [id, material] of identityMaterials) {
+      const faded = Boolean(characterId && id !== characterId);
+      material.opacity = faded ? 0.18 : 1;
+      if (material.transparent !== faded) { material.transparent = faded; material.needsUpdate = true; }
+    }
+    for (const label of labelRoot.querySelectorAll("[data-character]")) label.style.opacity = characterId && label.dataset.character !== characterId ? "0.25" : "1";
+    requestRender();
   }
   const raycaster = new THREE.Raycaster();
   let pointerStart = null;
@@ -459,8 +496,12 @@ export function createMap(container, labelRoot, onSelect) {
       ),
       camera,
     );
-    if (raycaster.intersectObject(pawnRoot, true).length)
-      onSelect(currentView.index);
+    const hit = raycaster.intersectObject(pawnRoot, true)[0];
+    if (hit) {
+      let piece = hit.object;
+      while (piece.parent && piece.parent !== pawnRoot) piece = piece.parent;
+      onSelect(piece.userData.index, piece.userData.characterId);
+    }
   });
   function zoom(factor) {
     camera.zoom = THREE.MathUtils.clamp(camera.zoom * factor, 0.65, 3);
@@ -549,31 +590,45 @@ export function createMap(container, labelRoot, onSelect) {
     renderPending = false;
     controls.update();
     const occupied = [];
+    const bounds = container.getBoundingClientRect();
+    const toolbar = container.parentElement.querySelector(".map-toolbar")?.getBoundingClientRect();
+    if (toolbar?.width && toolbar.height) occupied.push({ left: toolbar.left - bounds.left - 6, right: toolbar.right - bounds.left + 6, top: toolbar.top - bounds.top - 6, bottom: toolbar.bottom - bounds.top + 6 });
     for (const { element, point, name, number } of labelItems) {
       const p = point.clone().project(camera);
       const compact =
-        container.clientWidth < 500 && !element.classList.contains("active");
+        container.clientWidth < 500 && !element.classList.contains("active") && !element.classList.contains("piece-label");
       element.textContent = compact ? String(number) : name;
       element.classList.toggle("compact", compact);
       const width = element.offsetWidth,
         height = element.offsetHeight;
-      const x = THREE.MathUtils.clamp(
+      let x = THREE.MathUtils.clamp(
         (p.x * 0.5 + 0.5) * container.clientWidth,
         width / 2 + 8,
         container.clientWidth - width / 2 - 8,
       );
       const anchorY = (-p.y * 0.5 + 0.5) * container.clientHeight;
       let y = anchorY;
-      for (let attempts = 0; attempts < 12; attempts++) {
-        const collision = occupied.find(
-          (r) =>
-            x + width / 2 + 5 > r.left &&
-            x - width / 2 - 5 < r.right &&
-            y + 5 > r.top &&
-            y - height - 5 < r.bottom,
-        );
-        if (!collision) break;
-        y = collision.top - 7;
+      const piece = element.classList.contains("piece-label");
+      const anchorX = x;
+      const collides = (cx, cy) => occupied.some(r => cx + width / 2 + 5 > r.left && cx - width / 2 - 5 < r.right && cy + 5 > r.top && cy - height - 5 < r.bottom);
+      if (piece) {
+        const minY = height + 150, maxY = container.clientHeight - 180;
+        const baseY = THREE.MathUtils.clamp(y, minY, maxY);
+        const candidates = [[0, 0]];
+        for (let radius = 1; radius <= 7; radius++) for (let row = -radius; row <= radius; row++) for (let col = -radius; col <= radius; col++) {
+          if (Math.max(Math.abs(col), Math.abs(row)) === radius) candidates.push([col, row]);
+        }
+        for (const [col, row] of candidates) {
+          const cx = THREE.MathUtils.clamp(anchorX + col * (width + 7), width / 2 + 8, container.clientWidth - width / 2 - 8);
+          const cy = THREE.MathUtils.clamp(baseY + row * (height + 8), minY, maxY);
+          if (!collides(cx, cy)) { x = cx; y = cy; break; }
+        }
+      } else {
+        for (let attempts = 0; attempts < 12; attempts++) {
+          const collision = occupied.find(r => x + width / 2 + 5 > r.left && x - width / 2 - 5 < r.right && y + 5 > r.top && y - height - 5 < r.bottom);
+          if (!collision) break;
+          y = collision.top - 7;
+        }
       }
       occupied.push({
         left: x - width / 2,
@@ -585,8 +640,9 @@ export function createMap(container, labelRoot, onSelect) {
       element.style.top = `${y}px`;
       element.style.setProperty(
         "--leader-height",
-        `${Math.max(12, anchorY - y + 12)}px`,
+        `${piece ? Math.hypot(anchorX - x, anchorY - y + 12) : Math.max(12, anchorY - y + 12)}px`,
       );
+      element.style.setProperty("--leader-angle", `${piece ? -Math.atan2(anchorX - x, anchorY - y + 12) : 0}rad`);
       element.hidden = p.z > 1 || p.z < -1;
     }
     renderer.render(scene, camera);
@@ -598,7 +654,7 @@ export function createMap(container, labelRoot, onSelect) {
     renderPending = true;
     requestAnimationFrame(render);
   }
-  controls.addEventListener("change", requestRender);
+  controls.addEventListener("change", () => { requestRender(); onViewChange?.(); });
   requestRender();
   renderer.domElement.addEventListener("webglcontextlost", (event) => {
     event.preventDefault();
@@ -608,5 +664,32 @@ export function createMap(container, labelRoot, onSelect) {
     document.querySelector("#map-fallback").hidden = true;
     requestRender();
   });
-  return { update, zoom, reset, toggleTop };
+  function setTheme(theme) {
+    const light = theme === "light";
+    ambient.color.setHex(light ? 0xf6f0da : 0xc7dffa);
+    ambient.groundColor.setHex(light ? 0x546846 : 0x384450);
+    ambient.intensity = light ? 2.6 : 2.4;
+    sun.color.setHex(light ? 0xffedca : 0xd4e5fa);
+    sun.intensity = light ? 3.7 : 3.4;
+    materials.ground.color.setHex(light ? 0x7f8b63 : palette.ground);
+    materials.wood.color.setHex(light ? 0x463a28 : palette.wood);
+    materials.tree.color.setHex(light ? 0x465b38 : 0x334e49);
+    const colors = light ? [0x87926a, 0x929973, 0x9ba07c, 0xa8aa84, 0xb2b08d, 0xbcb795, 0xc8c0a1, 0xd3c8ac, 0xdfd3b9] : terrainColors;
+    terrainMaterials.forEach((material, index) => material.color.setHex(colors[index]));
+    terrainEdgeMaterial.color.setHex(light ? 0x646c49 : 0x283b4b);
+    requestRender();
+  }
+  function getCamera() {
+    return { position: camera.position.toArray(), target: controls.target.toArray(), zoom: camera.zoom, overhead };
+  }
+  function restoreCamera(state) {
+    camera.position.fromArray(state.position);
+    controls.target.fromArray(state.target);
+    camera.zoom = state.zoom;
+    overhead = state.overhead;
+    camera.updateProjectionMatrix();
+    controls.update();
+    requestRender();
+  }
+  return { update, zoom, reset, toggleTop, highlight, setTheme, getCamera, restoreCamera };
 }

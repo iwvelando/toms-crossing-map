@@ -48,8 +48,9 @@ test("chapter gate, route steps, character isolation, and reset @smoke", async (
   await expect(page.locator("#entries")).toBeEmpty();
   await expect(page.locator("#entry-detail")).toBeEmpty();
   await page.locator("#begin").click();
+  await expect(page.locator("#entry-detail h3")).toHaveText("Leaving home");
   await page.reload();
-  await expect(page.locator("#locked-state")).toBeVisible();
+  await expect(page.locator("#entry-detail h3")).toHaveText("Leaving home");
   expect(errors).toEqual([]);
 });
 test("mobile layout and journal remain usable", async ({ page }) => {
