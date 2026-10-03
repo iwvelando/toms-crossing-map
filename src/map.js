@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { pieceStyle } from "./pieces.js";
+import { getChapterJournalFocus } from "./story.js";
 
 const palette = {
   ground: 0x40515b,
@@ -329,6 +330,7 @@ export function createMap(container, labelRoot, onSelect, onViewChange) {
   let labelItems = [],
     currentView = null;
   let currentOverview = null, currentShowCharacter = true;
+  let focusMarker = null;
   const routePaths = {
     "leaving-home": [
       [-10, 5],
@@ -357,15 +359,26 @@ export function createMap(container, labelRoot, onSelect, onViewChange) {
     ],
   };
   const identityMaterials = new Map();
+  const ghostMaterials = new Map();
   function identityMaterial(id, characters) {
     if (!identityMaterials.has(id)) identityMaterials.set(id, mat(pieceStyle(id, characters).color, { metalness: 0.35, roughness: 0.4, emissive: pieceStyle(id, characters).color, emissiveIntensity: 0.15 }));
     return identityMaterials.get(id);
   }
-  function addPiece(entry, characters, offset, labeled) {
+  function addPiece(entry, characters, offset, labeled, ghost = false) {
     const place = entry.locations.find(place => place.id === entry.position && Number.isFinite(place.x) && Number.isFinite(place.z));
     if (!place) return false;
     const identity = pieceStyle(entry.selected.id, characters);
-    const material = identityMaterial(entry.selected.id, characters);
+    let material = identityMaterial(entry.selected.id, characters);
+    if (ghost) {
+      if (!ghostMaterials.has(entry.selected.id)) {
+        const translucent = material.clone();
+        translucent.transparent = true;
+        translucent.opacity = 0.42;
+        translucent.depthWrite = false;
+        ghostMaterials.set(entry.selected.id, translucent);
+      }
+      material = ghostMaterials.get(entry.selected.id);
+    }
     const root = new THREE.Group();
     root.userData = { index: entry.index, characterId: entry.selected.id };
     pawnRoot.add(root);
@@ -385,10 +398,12 @@ export function createMap(container, labelRoot, onSelect, onViewChange) {
         identity.shape === "cube" ? new THREE.BoxGeometry(0.4, 0.4, 0.4) : new THREE.TorusGeometry(0.23, 0.085, 8, 20);
       mesh(head, material, 0, 1.03, 0, root);
     }
+    if (ghost) root.traverse(object => { if (object.isMesh) object.castShadow = false; });
     if (!labeled) return true;
     const button = document.createElement("button");
     button.className = "map-label piece-label";
     button.dataset.character = entry.selected.id;
+    button.dataset.position = place.id;
     button.style.setProperty("--piece-color", identity.color);
     button.setAttribute("aria-label", `${entry.selected.name}, piece ${identity.number}, show last located entry`);
     button.onclick = () => onSelect(entry.index, entry.selected.id);
@@ -396,12 +411,34 @@ export function createMap(container, labelRoot, onSelect, onViewChange) {
     labelItems.push({ element: button, name: String(identity.number), number: identity.number, point: new THREE.Vector3(x, root.position.y + 1.55, z) });
     return true;
   }
+  function addJournalFocus(view, focus) {
+    const { location: place, ghost } = focus;
+    const identity = pieceStyle(view.selected.id, view.characters);
+    if (ghost) addPiece(view, view.characters, [0, 0], false, true);
+    const y = elevation(place.x, place.z);
+    const marker = document.createElement("div");
+    marker.className = "journal-focus-marker";
+    marker.setAttribute("aria-hidden", "true");
+    marker.style.setProperty("--piece-color", identity.color);
+    labelRoot.append(marker);
+    focusMarker = { element: marker, point: new THREE.Vector3(place.x, y + 0.3, place.z) };
+    const label = document.createElement("button");
+    label.className = "map-label piece-label journal-focus-label";
+    label.dataset.character = view.selected.id;
+    label.dataset.event = view.current.id;
+    label.dataset.position = place.id;
+    label.style.setProperty("--piece-color", identity.color);
+    label.setAttribute("aria-label", `${view.selected.name}, selected journal entry at ${place.name}`);
+    label.onclick = () => onSelect(view.index, view.selected.id);
+    labelRoot.append(label);
+    labelItems.unshift({ element: label, name: `◎ ${identity.number} · Journal`, number: identity.number, point: new THREE.Vector3(place.x, y + 1.65, place.z) });
+  }
   function update(view, showCharacter = true, overview = null) {
     highlight(null);
     requestRender();
     currentView = view; currentOverview = overview; currentShowCharacter = showCharacter;
     clearGroup(journey); clearGroup(landmarks); clearGroup(pawnRoot);
-    labelRoot.replaceChildren(); labelItems = [];
+    labelRoot.replaceChildren(); labelItems = []; focusMarker = null;
     pawnRoot.visible = Boolean(overview) || showCharacter;
     const entries = overview ? overview.entries : showCharacter && view.current ? [view] : [];
     const locations = overview ? overview.locations : view.locations;
@@ -410,6 +447,10 @@ export function createMap(container, labelRoot, onSelect, onViewChange) {
     container.dataset.route = entries.flatMap(entry => entry.drawnRoute).join(",");
     container.dataset.kind = overview ? "comparison" : view.current?.kind || "";
     container.dataset.position = overview ? "" : view.position || "";
+    const focus = overview ? getChapterJournalFocus(view) : null;
+    container.dataset.focusPosition = focus?.location.id || "";
+    container.dataset.focusCharacter = focus ? view.selected.id : "";
+    container.dataset.focusGhost = String(Boolean(focus?.ghost));
     for (const place of locations) {
       if (!Number.isFinite(place.x) || !Number.isFinite(place.z)) continue;
       const y = elevation(place.x, place.z);
@@ -463,6 +504,7 @@ export function createMap(container, labelRoot, onSelect, onViewChange) {
       if (addPiece(entry, view.characters, [Math.cos(angle) * radius, Math.sin(angle) * radius], Boolean(overview))) pieces++;
     });
     container.dataset.pieces = String(pieces);
+    if (focus) addJournalFocus(view, focus);
   }
   function highlight(characterId) {
     for (const [id, material] of identityMaterials) {
@@ -591,6 +633,12 @@ export function createMap(container, labelRoot, onSelect, onViewChange) {
     controls.update();
     const occupied = [];
     const bounds = container.getBoundingClientRect();
+    if (focusMarker) {
+      const p = focusMarker.point.clone().project(camera);
+      focusMarker.element.style.left = `${(p.x * 0.5 + 0.5) * container.clientWidth}px`;
+      focusMarker.element.style.top = `${(-p.y * 0.5 + 0.5) * container.clientHeight}px`;
+      focusMarker.element.hidden = p.z > 1 || p.z < -1;
+    }
     const toolbar = container.parentElement.querySelector(".map-toolbar")?.getBoundingClientRect();
     if (toolbar?.width && toolbar.height) occupied.push({ left: toolbar.left - bounds.left - 6, right: toolbar.right - bounds.left + 6, top: toolbar.top - bounds.top - 6, bottom: toolbar.bottom - bounds.top + 6 });
     for (const { element, point, name, number } of labelItems) {
@@ -618,10 +666,21 @@ export function createMap(container, labelRoot, onSelect, onViewChange) {
         for (let radius = 1; radius <= 7; radius++) for (let row = -radius; row <= radius; row++) for (let col = -radius; col <= radius; col++) {
           if (Math.max(Math.abs(col), Math.abs(row)) === radius) candidates.push([col, row]);
         }
+        let placed = false;
         for (const [col, row] of candidates) {
           const cx = THREE.MathUtils.clamp(anchorX + col * (width + 7), width / 2 + 8, container.clientWidth - width / 2 - 8);
           const cy = THREE.MathUtils.clamp(baseY + row * (height + 8), minY, maxY);
-          if (!collides(cx, cy)) { x = cx; y = cy; break; }
+          if (!collides(cx, cy)) { x = cx; y = cy; placed = true; break; }
+        }
+        // A wide Journal badge can fill the nearby slots in a dense comparison.
+        // Search the entire label area before accepting an overlapping position.
+        if (!placed) {
+          const slots = [];
+          for (let cy = minY; cy <= maxY; cy += 7) for (let cx = width / 2 + 8; cx <= container.clientWidth - width / 2 - 8; cx += 7) {
+            if (!collides(cx, cy)) slots.push([cx, cy]);
+          }
+          slots.sort((a, b) => Math.hypot(a[0] - anchorX, a[1] - baseY) - Math.hypot(b[0] - anchorX, b[1] - baseY));
+          if (slots.length) [x, y] = slots[0];
         }
       } else {
         for (let attempts = 0; attempts < 12; attempts++) {

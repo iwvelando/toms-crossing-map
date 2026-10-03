@@ -16,7 +16,7 @@ test("chapter comparison selects subsets, finds dreams, and retracts @usability"
   await expect(boxes.first()).toBeChecked();
   await page.locator("#show-none").click();
   await expect(page.locator("#map")).toHaveAttribute("data-pieces", "0");
-  await expect(page.locator(".map-label")).toHaveCount(0);
+  await expect(page.locator(".map-label:not(.journal-focus-label)")).toHaveCount(0);
   await boxes.first().check();
   await expect(page.locator("#comparison-status")).toContainText("1 selected");
   await boxes.first().focus();

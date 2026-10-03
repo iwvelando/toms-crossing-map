@@ -1,5 +1,5 @@
 import "./style.css";
-import { getView, combinePayloads, getLayerCharacters, getChapterOverview } from "./story.js";
+import { getView, combinePayloads, getLayerCharacters, getChapterOverview, getChapterJournalFocus } from "./story.js";
 import { pieceStyle } from "./pieces.js";
 import { loadThrough } from "./chapters.js";
 import { createMap } from "./map.js";
@@ -114,6 +114,9 @@ function render() {
   $("#step-count").textContent = view.current ? `ENTRY ${journalIndex + 1} OF ${journalIndices.length}` : "NO ENTRY";
   $("#previous").disabled = !view.current || journalIndex <= 0;
   $("#next").disabled = !view.current || journalIndex === journalIndices.length - 1;
+  const focus = mapMode === "chapter" ? getChapterJournalFocus(view) : null;
+  $("#journal-focus-status").hidden = mapMode !== "chapter" || !view.current;
+  $("#journal-focus-status").textContent = focus ? `◎ Selected journal entry: ${focus.location.name}.${focus.ghost ? " A translucent piece marks this earlier observation." : " Final entry in this chapter and layer."}` : "This entry has no mapped position; the journal retains the account.";
   if (view.current) {
     journalIndices.forEach((index, number) => {
       const event = view.events[index];

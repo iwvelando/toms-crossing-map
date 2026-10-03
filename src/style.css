@@ -1089,6 +1089,22 @@ select:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
 .legend-person:hover { background: var(--hover); }
 .map-label.piece-label { border-color: var(--piece-color); color: var(--piece-color); border-radius: 50%; width: 28px; height: 28px; padding: 6px 0; text-align: center; font-weight: bold; }
 .map-label.piece-label::after { background: var(--piece-color); transform-origin: top; transform: rotate(var(--leader-angle, 0rad)); opacity: .6; }
+.map-label.journal-focus-label { width: auto; border-radius: 3px; padding: 6px 9px; z-index: 2; box-shadow: 0 0 0 2px var(--label-bg), 0 3px 12px #0004; }
+.journal-focus-marker {
+  position: absolute;
+  width: 38px;
+  height: 38px;
+  transform: translate(-50%, -50%);
+  border: 2px solid var(--piece-color);
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px #102131, inset 0 0 0 2px #102131, 0 0 14px var(--piece-color);
+  animation: journal-focus-pulse .9s ease-out 2;
+}
+.journal-focus-marker::before, .journal-focus-marker::after { content: ""; position: absolute; background: var(--piece-color); }
+.journal-focus-marker::before { width: 8px; height: 2px; left: -7px; top: 16px; box-shadow: 40px 0 var(--piece-color); }
+.journal-focus-marker::after { width: 2px; height: 8px; left: 16px; top: -7px; box-shadow: 0 40px var(--piece-color); }
+@keyframes journal-focus-pulse { from { opacity: .4; transform: translate(-50%, -50%) scale(1.35); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+@media (prefers-reduced-motion: reduce) { .journal-focus-marker { animation: none; } }
 input:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
 main.expanded-map { display: flex; flex-direction: column; height: auto; }
 .expanded-map .map-panel { height: max(720px, 85svh); flex-shrink: 0; }

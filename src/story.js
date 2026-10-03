@@ -81,3 +81,12 @@ export function getChapterOverview(limit, characterIds, data = initial, layer = 
   }
   return { characters, entries, locations: [...places.values()] };
 }
+
+// Journal focus is an observation from this entry, never a carried-forward position.
+export function getChapterJournalFocus(view) {
+  if (!view.selected || !view.current || view.current.chapter !== view.chapters.at(-1)?.id) return null;
+  const location = view.locations.find(place => place.id === view.position && Number.isFinite(place.x) && Number.isFinite(place.z));
+  if (!location) return null;
+  const final = view.events.findLast(event => event.chapter === view.current.chapter);
+  return { location, ghost: final?.id !== view.current.id };
+}
