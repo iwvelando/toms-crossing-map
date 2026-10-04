@@ -10,14 +10,14 @@ export async function openChapter(page, chapter) {
   await page.locator(`#chapter-option-${chapter}`).click();
   await expect(page.locator("#load-status")).toHaveText("");
   await expect(page.locator(".chapter-heading .eyebrow")).not.toBeEmpty();
-  await page.locator("#layer-select").selectOption("all");
+  await selectControl(page, "#layer-select", "all");
 }
 
 export async function visitEntries(page, steps, afterEntry = async () => {}) {
   let selected;
   for (const { characterId, index } of steps) {
     if (selected !== characterId) {
-      await page.locator("#character-select").selectOption(characterId);
+      await selectControl(page, "#character-select", characterId);
       selected = characterId;
     }
     if (index === null) {
@@ -32,4 +32,10 @@ export async function visitEntries(page, steps, afterEntry = async () => {}) {
     }
     await afterEntry();
   }
+}
+
+// Exercise the same explicit menu selection used by readers, including on touch.
+export async function selectControl(page, selector, value) {
+  await page.locator(`${selector}-trigger`).click();
+  await page.locator(`${selector}-options [data-value="${value}"]`).click();
 }

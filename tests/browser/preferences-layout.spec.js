@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { openChapter, checkOverflow } from "./atlas-journey.js";
+import { openChapter, checkOverflow, selectControl } from "./atlas-journey.js";
 const key = "toms-crossing-map.state";
 
 test("themes follow the system until a saved toggle overrides it", async ({ page }, testInfo) => {
@@ -28,13 +28,16 @@ test("reading progress and journal selections restore automatically, and backtra
   await openChapter(page, 1);
   await page.locator(".entry-button").nth(1).click();
   const title = await page.locator("#entry-detail h3").innerText();
-  await page.locator("#character").click();
+  // Old hidden-character preferences must not hide the followed participant.
+  await page.evaluate(key => { const state = JSON.parse(localStorage.getItem(key)); state.selected = false; localStorage.setItem(key, JSON.stringify(state)); }, key);
+  await page.reload();
   await page.locator("#view-top").click();
   await page.locator("#expand-map").click();
   await page.reload();
   await expect(page.locator("#entry-detail h3")).toHaveText(title);
   await expect(page.locator("#layer-select")).toHaveValue("all");
-  await expect(page.locator("#character")).toHaveAttribute("aria-pressed", "false");
+  await expect(page.locator("#character")).toHaveCount(0);
+  await expect(page.locator("#map")).toHaveAttribute("data-pieces", "1");
   await expect(page.locator("#view-top")).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator("main")).toHaveClass("expanded-map");
   await page.locator("#chapter-limit").click();
@@ -46,14 +49,15 @@ test("reading progress and journal selections restore automatically, and backtra
 
 test("comparison choices and optional labels survive reload", async ({ page }) => {
   await openChapter(page, 1);
-  await page.locator("#map-mode").selectOption("chapter");
+  await selectControl(page, "#map-mode", "chapter");
   await page.locator("#show-all").click();
+  await page.locator("#comparison-summary").click();
   const inputs = page.locator("#path-characters input:not(:disabled)");
   await inputs.first().uncheck();
   await page.locator("#show-locations").check();
   const chosen = await inputs.evaluateAll(nodes => nodes.filter(node => node.checked).map(node => node.value));
   const person = await page.locator("#character-select option").last().getAttribute("value");
-  await page.locator("#character-select").selectOption(person);
+  await selectControl(page, "#character-select", person);
   await page.reload();
   await expect(page.locator("#map-mode")).toHaveValue("chapter");
   await expect(page.locator("#show-locations")).toBeChecked();

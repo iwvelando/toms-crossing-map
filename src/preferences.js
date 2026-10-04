@@ -15,7 +15,7 @@ export function normalizeState(value) {
     layer: layers.has(value.layer) ? value.layer : "journey",
     mapMode: value.mapMode === "chapter" ? "chapter" : "entry",
     compared: Array.isArray(value.compared) ? [...new Set(value.compared.filter(validId))].slice(0, 200) : ["K"],
-    selected: value.selected !== false,
+    legendOpen: value.legendOpen === true,
     showLocations: value.showLocations === true,
     expanded: value.expanded === true,
     detailsOpen: value.detailsOpen === true,

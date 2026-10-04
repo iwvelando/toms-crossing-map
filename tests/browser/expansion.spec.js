@@ -78,11 +78,14 @@ test("unavailable chapter load can be retried without restoring stale content", 
   await expect(page.locator("#entry-detail h3")).not.toBeEmpty();
 });
 
-test("primitive pawn survives an unavailable model", async ({ page }) => {
+test("geometric pieces need no model download", async ({ page }) => {
+  const models = [];
+  page.on("request", request => { if (request.url().endsWith(".glb")) models.push(request.url()); });
   await page.route("**/models/*.glb", route => route.abort());
   await page.goto("/");
   await page.locator("#begin").click();
-  await expect(page.locator("#map")).toHaveAttribute("data-asset", "fallback");
+  await expect(page.locator("#map")).toHaveAttribute("data-asset", "procedural");
+  expect(models).toEqual([]);
   await expect(page.locator("#entry-detail h3")).toHaveText("Leaving home");
   await expect(page.locator("#map")).toHaveAttribute("data-position", "WILLOW-OAK");
   await expect(page.locator(".map-label")).toHaveCount(3);

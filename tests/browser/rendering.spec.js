@@ -11,7 +11,7 @@ test("the static board stops drawing when idle and redraws after interaction", a
     }
   });
   await page.goto("/");
-  await expect(page.locator("#map")).toHaveAttribute("data-asset", "loaded");
+  await expect(page.locator("#map")).toHaveAttribute("data-asset", "procedural");
   await expect.poll(() => page.evaluate(() => window.drawCalls)).toBeGreaterThan(0);
   await expect.poll(async () => {
     const before = await page.evaluate(() => window.drawCalls);

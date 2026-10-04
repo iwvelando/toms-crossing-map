@@ -10,7 +10,7 @@ try {
   });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce", colorScheme: "dark" });
   await page.goto("http://127.0.0.1:4174/");
-  await page.locator('#map[data-asset="loaded"]').waitFor();
+  await page.locator('#map[data-asset="procedural"]').waitFor();
   await page.evaluate(() => {
     for (const el of document.querySelectorAll(".map-heading,.map-toolbar,.map-key,.map-disclaimer,.map-instructions"))
       el.style.display = "none";

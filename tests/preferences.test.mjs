@@ -8,11 +8,12 @@ test("saved reading state fails closed for corrupt or unsupported boundaries", (
   assert.equal(readState({ getItem: () => "{broken" }), null);
 });
 test("preferences retain valid selections and discard malformed optional fields", () => {
-  const value = normalizeState({ version: 1, limit: 4, characterId: "K", eventId: "selected-entry", layer: "dream", mapMode: "chapter", compared: ["K", "K", null, "bad id"], selected: false, showLocations: true, expanded: true, camera: { position: [24, 32, 36], target: [0, 0, 0], zoom: 1.2, overhead: false } });
+  const value = normalizeState({ version: 1, limit: 4, characterId: "K", eventId: "selected-entry", layer: "dream", mapMode: "chapter", compared: ["K", "K", null, "bad id"], selected: false, legendOpen: true, showLocations: true, expanded: true, camera: { position: [24, 32, 36], target: [0, 0, 0], zoom: 1.2, overhead: false } });
   assert.deepEqual(value.compared, ["K"]);
   assert.equal(value.eventId, "selected-entry");
   assert.equal(value.layer, "dream");
-  assert.equal(value.selected, false);
+  assert.equal(value.legendOpen, true);
+  assert(!("selected" in value));
   assert.equal(value.camera.zoom, 1.2);
   const invalid = normalizeState({ version: 1, limit: 1, layer: "invented", characterId: {}, camera: { position: [Infinity, 0, 0] } });
   assert.equal(invalid.layer, "journey");

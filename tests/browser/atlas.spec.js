@@ -6,7 +6,7 @@ test("chapter gate, route steps, character isolation, and reset @smoke", async (
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
   await expect(page.locator("#map canvas")).toBeVisible();
-  await expect(page.locator("#map")).toHaveAttribute("data-asset", "loaded");
+  await expect(page.locator("#map")).toHaveAttribute("data-asset", "procedural");
   await expect(page.locator(".map-label")).toHaveCount(0);
   await expect(page.locator("#unlocked-state")).toBeHidden();
   await page.getByRole("button", { name: "I’ve finished Chapter One" }).click();
@@ -24,12 +24,8 @@ test("chapter gate, route steps, character isolation, and reset @smoke", async (
   await expect(
     page.getByRole("button", { name: "Next movement" }),
   ).toBeEnabled();
-  await page.locator("#character").click();
-  await expect(page.locator("#character")).toHaveAttribute(
-    "aria-pressed",
-    "false",
-  );
-  await page.locator("#character").click();
+  await expect(page.locator("#character")).toHaveCount(0);
+  await expect(page.locator("#map")).toHaveAttribute("data-pieces", "1");
   await page.getByRole("button", { name: "Toggle overhead view" }).click();
   await expect(page.locator("#view-top")).toHaveAttribute(
     "aria-pressed",
@@ -144,7 +140,7 @@ test("public copy, attribution, distribution notices, and CSP @smoke", async ({
     "script-src 'self'",
   );
   await page.locator("#begin").click();
-  await expect(page.locator("#map")).toHaveAttribute("data-asset", "loaded");
+  await expect(page.locator("#map")).toHaveAttribute("data-asset", "procedural");
   await expect(page.locator(".page-footer")).toContainText(
     "Mark Z. Danielewski",
   );

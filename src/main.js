@@ -1,22 +1,24 @@
 import "./style.css";
-import { getView, combinePayloads, getLayerCharacters, getChapterOverview, getChapterJournalFocus } from "./story.js";
+import { getView, combinePayloads, getLayerCharacters, getChapterOverview, getChapterJournalFocus, getJournalTrail } from "./story.js";
 import { pieceStyle } from "./pieces.js";
 import { loadThrough } from "./chapters.js";
 import { createMap } from "./map.js";
+import { createSelectPicker } from "./picker.js";
 import { createChapterPicker } from "./chapter-picker.js";
 import { readState, writeState } from "./preferences.js";
 import { createThemeControl } from "./theme.js";
 
 const $ = selector => document.querySelector(selector);
-let limit = 0, step = 0, selected = true, characterId = "K", layer = "journey", map;
+let limit = 0, step = 0, characterId = "K", layer = "journey", map;
 let data = combinePayloads([]), revision = 0, loading = false, loadError = false;
 let mapMode = "entry", compared = new Set(["K"]);
 let showLocations = false;
 let journalIndices = [];
 let initialized = false, eventId = null, detailsOpen = false, cameraSaveTimer;
 const savedState = readState();
+const layerLabels = new Map([...$("#layer-select").options].map(option => [option.value, option.textContent]));
 function stateSnapshot() {
-  return { version: 1, limit, characterId, eventId, layer, mapMode, compared: [...compared], selected, showLocations,
+  return { version: 1, limit, characterId, eventId, layer, mapMode, compared: [...compared], showLocations, legendOpen: $("#legend").open,
     expanded: $("main").classList.contains("expanded-map"), detailsOpen, camera: map?.getCamera() ?? savedState?.camera ?? null };
 }
 function persistState() {
@@ -27,8 +29,9 @@ function scheduleCameraSave() {
   clearTimeout(cameraSaveTimer);
   cameraSaveTimer = setTimeout(persistState, 150);
 }
+const selectPickers = ["#map-mode", "#layer-select", "#character-select"].map(id => createSelectPicker($(id)));
 const chapterPicker = createChapterPicker($("#chapter-picker"), setLimit);
-function selectStep(index, personId) { if (personId) characterId = personId; step = index; selected = true; render(); }
+function selectStep(index, personId) { if (personId) characterId = personId; step = index; render(); }
 try { map = createMap($("#map"), $("#map-labels"), selectStep, scheduleCameraSave); }
 catch (error) {
   console.warn("3D map unavailable:", error);
@@ -72,15 +75,19 @@ function render() {
   $("#character-select").value = characterId;
   $("#character-select").disabled = loading;
   $("#layer-select").value = layer;
+  for (const option of $("#layer-select").options) {
+    const count = getLayerCharacters(limit, data, option.value, mapMode === "chapter").filter(person => person.count).length;
+    option.textContent = `${layerLabels.get(option.value)} · ${count} ${count === 1 ? "character" : "characters"}`;
+  }
   $("#layer-select").disabled = loading;
   $("#map-mode").disabled = loading;
-  $("#layer-status").textContent = limit && !loading ? `${matching.length} ${matching.length === 1 ? "character has" : "characters have"} entries in this layer ${mapMode === "chapter" ? "in this chapter" : "through the reading limit"}. Matching characters appear first.` : "";
+  $("#layer-status").textContent = limit && !loading ? `${matching.length} ${matching.length === 1 ? "character" : "characters"} · ${mapMode === "chapter" ? "This chapter only" : "Through your reading limit"}` : "";
   $("#map-mode").value = mapMode;
   $("#show-locations").checked = showLocations;
   $("#comparison").hidden = mapMode !== "chapter";
   $("#path-characters").replaceChildren();
   const chapterPeople = overview.characters.filter(person => person.count);
-  if (limit && !loading) for (const person of [...chapterPeople, ...overview.characters.filter(person => !person.count)]) {
+  if (limit && !loading) for (const person of chapterPeople) {
     const row = element("label", "path-character", "");
     const input = document.createElement("input");
     input.type = "checkbox"; input.value = person.id;
@@ -95,17 +102,12 @@ function render() {
   if (focusedPath) [...$("#path-characters").querySelectorAll("input")].find(input => input.value === focusedPath)?.focus({ preventScroll: true });
   const chosenPeople = chapterPeople.filter(person => compared.has(person.id));
   $("#comparison-status").textContent = `${chosenPeople.length} selected · ${chapterPeople.length} with entries in this chapter and layer`;
+  $("#comparison-summary").textContent = `Choose paths · ${chosenPeople.length} of ${chapterPeople.length} selected`;
   $("#show-all").disabled = loading || !chapterPeople.length;
   $("#show-none").disabled = loading;
   $("#empty-state").hidden = Boolean(view.current) || loading || loadError;
   $("#load-status").textContent = loading ? "Opening selected chapters…" : loadError ? "The chapter could not be opened. Reload the page to retry." : "";
-  const identity = pieceStyle(characterId, view.characters);
-  $("#character .avatar").textContent = view.selected ? String(identity.number) : "";
-  $("#character .avatar").style.setProperty("--piece-color", identity.color);
-  $("#character strong").textContent = view.selected?.name || "";
-  $("#character").setAttribute("aria-pressed", String(selected));
-  $("#character small").textContent = selected ? `${identity.shape} piece · selected entry` : "Route hidden · click to show";
-  $("#character").disabled = mapMode === "chapter";
+  $("#character-select-label").textContent = mapMode === "chapter" ? "Follow in journal · character or companion" : "Character or companion";
   const boundary = view.chapters.at(-1);
   $(".chapter-heading .eyebrow").textContent = boundary?.label || "";
   $(".chapter-heading h2").textContent = boundary?.title || "";
@@ -116,7 +118,7 @@ function render() {
   $("#next").disabled = !view.current || journalIndex === journalIndices.length - 1;
   const focus = mapMode === "chapter" ? getChapterJournalFocus(view) : null;
   $("#journal-focus-status").hidden = mapMode !== "chapter" || !view.current;
-  $("#journal-focus-status").textContent = focus ? `◎ Selected journal entry: ${focus.location.name}.${focus.ghost ? " A translucent piece marks this earlier observation." : " Final entry in this chapter and layer."}` : "This entry has no mapped position; the journal retains the account.";
+  $("#journal-focus-status").textContent = focus ? `◎ Selected journal entry: ${focus.location.name}. Earlier entries in this journal are softly visible; other chapter paths are fainter.` : "This entry has no mapped position; the journal retains the account.";
   if (view.current) {
     journalIndices.forEach((index, number) => {
       const event = view.events[index];
@@ -135,7 +137,7 @@ function render() {
       detailsOpen = details.open; persistState();
     };
     details.append(element("summary", "", "What the map can establish"), element("p", "", event.note));
-    details.append(element("p", "", "Entry view shows one movement; chapter comparison shows selected participants’ separate entries in that chapter. All coordinates, bends, distances and terrain are illustrative; positions record observations, not continued presence."));
+    details.append(element("p", "", "The current entry is fully visible, with earlier entries in this journal softly visible behind it. Chapter comparison adds selected participants’ separate entries in that chapter. All coordinates, bends, distances and terrain are illustrative; positions record observations, not continued presence."));
     for (const place of view.locations) {
       for (const note of place.notes) details.append(element("p", "", `${place.name}: ${note.text}`));
     }
@@ -146,29 +148,31 @@ function render() {
       element("p", "place-sequence", placeNames.length ? placeNames.join(" → ") : "Location or route not established."),
       details, element("span", "chapter-reference", event.reference));
   }
-  map?.update(view, selected, mapMode === "chapter" ? { ...overview, showLocations } : null);
+  const trail = getJournalTrail(view, data, layer, mapMode === "chapter");
+  map?.update(view, true, mapMode === "chapter" ? { ...overview, showLocations } : null, trail);
   $(".map-key").replaceChildren();
-  const keyPeople = mapMode === "chapter" ? chosenPeople : view.selected && selected ? [view.selected] : [];
+  const keyPeople = mapMode === "chapter" ? chosenPeople : view.selected ? [view.selected] : [];
   for (const person of keyPeople) {
     const identity = pieceStyle(person.id, view.characters);
     const button = element("button", "legend-person", "");
     button.style.setProperty("--piece-color", identity.color);
+    if (person.id === characterId) button.setAttribute("aria-current", "true");
     button.append(element("span", `piece-badge piece-${identity.shape}`, String(identity.number)), element("span", "", person.name));
     button.onclick = () => { characterId = person.id; step = 0; render(); };
-    button.onmouseenter = button.onfocus = () => map?.highlight(person.id);
-    button.onmouseleave = button.onblur = () => map?.highlight(null);
     $(".map-key").append(button);
   }
-  $(".map-key").hidden = !keyPeople.length;
+  $("#legend").hidden = !keyPeople.length;
+  selectPickers.forEach(picker => picker.sync());
   persistState();
 }
 async function setLimit(value, restored = null) {
   const ownRevision = ++revision;
   limit = Number.isInteger(value) && value >= 0 && value <= 12 ? value : 0;
-  step = 0; selected = true; characterId = "K"; layer = "journey";
+  step = 0; characterId = "K"; layer = "journey";
   mapMode = "entry"; compared = new Set(["K"]);
   detailsOpen = false;
   if (restored) {
+    $("#legend").open = restored.legendOpen;
     showLocations = restored.showLocations; detailsOpen = restored.detailsOpen;
     $("main").classList.toggle("expanded-map", restored.expanded);
     $("#expand-map").setAttribute("aria-pressed", String(restored.expanded));
@@ -177,6 +181,7 @@ async function setLimit(value, restored = null) {
       $("#view-top").setAttribute("aria-pressed", String(restored.camera.overhead));
     }
   }
+  $("#comparison-options").open = false;
   data = combinePayloads([]); loadError = false; loading = limit > 0;
   eventId = null;
   // Record an explicit reading-limit choice even if its download is interrupted.
@@ -191,7 +196,7 @@ async function setLimit(value, restored = null) {
       const people = getView(limit, 0, "", data, "all").characters;
       const ids = new Set(people.map(person => person.id));
       characterId = ids.has(restored.characterId) ? restored.characterId : ids.has("K") ? "K" : people[0]?.id || "K";
-      layer = restored.layer; mapMode = restored.mapMode; selected = restored.selected;
+      layer = restored.layer; mapMode = restored.mapMode;
       compared = new Set(restored.compared.filter(id => ids.has(id)));
       step = Math.max(0, getView(limit, 0, characterId, data, layer).events.findIndex(event => event.id === restored.eventId));
     }
@@ -205,18 +210,26 @@ async function setLimit(value, restored = null) {
 $("#begin").onclick = () => setLimit(1);
 $("#previous").onclick = () => selectStep(journalIndices[journalIndices.indexOf(step) - 1]);
 $("#next").onclick = () => selectStep(journalIndices[journalIndices.indexOf(step) + 1]);
-$("#character-select").onchange = event => { characterId = event.target.value; step = 0; selected = true; render(); };
+$("#character-select").onchange = event => { characterId = event.target.value; step = 0; render(); };
 $("#layer-select").onchange = event => {
   layer = event.target.value; step = 0;
   const people = getLayerCharacters(limit, data, layer, mapMode === "chapter");
   if (!people.find(person => person.id === characterId)?.count) characterId = people.find(person => person.count)?.id || characterId;
   render();
 };
-$("#map-mode").onchange = event => { mapMode = event.target.value; compared.add(characterId); render(); };
+$("#map-mode").onchange = event => {
+  mapMode = event.target.value;
+  const people = getLayerCharacters(limit, data, layer, mapMode === "chapter");
+  if (!people.find(person => person.id === characterId)?.count) {
+    characterId = people.find(person => person.count)?.id || characterId;
+    step = 0;
+  }
+  compared.add(characterId); render();
+};
 $("#show-all").onclick = () => { compared = new Set(getLayerCharacters(limit, data, layer, true).filter(person => person.count).map(person => person.id)); render(); };
 $("#show-none").onclick = () => { compared.clear(); render(); };
 $("#show-locations").onchange = event => { showLocations = event.target.checked; render(); };
-$("#character").onclick = () => { selected = !selected; render(); };
+$("#legend").ontoggle = persistState;
 $("#zoom-in").onclick = () => map?.zoom(1.2);
 $("#zoom-out").onclick = () => map?.zoom(1 / 1.2);
 $("#view-top").onclick = () => $("#view-top").setAttribute("aria-pressed", String(map?.toggleTop()));

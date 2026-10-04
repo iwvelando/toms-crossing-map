@@ -82,6 +82,14 @@ export function getChapterOverview(limit, characterIds, data = initial, layer = 
   return { characters, entries, locations: [...places.values()] };
 }
 
+// History follows this journal's order and filtering, never another person's clock.
+export function getJournalTrail(view, data = initial, layer = "all", chapterOnly = false) {
+  if (!view.current || !view.selected) return [];
+  const limit = view.chapters.at(-1)?.id ?? 0;
+  return view.events.slice(0, view.index).flatMap((event, index) =>
+    !chapterOnly || event.chapter === limit ? [getView(limit, index, view.selected.id, data, layer)] : []);
+}
+
 // Journal focus is an observation from this entry, never a carried-forward position.
 export function getChapterJournalFocus(view) {
   if (!view.selected || !view.current || view.current.chapter !== view.chapters.at(-1)?.id) return null;

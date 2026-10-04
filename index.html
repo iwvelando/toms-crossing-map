@@ -34,7 +34,7 @@
       <header class="masthead">
         <a class="brand" href="./" aria-label="Tom’s Crossing, reset atlas"
           ><span class="brand-mark" aria-hidden="true">T<span>╱</span>C</span
-          ><span>Tom’s Crossing<small>A TABLETOP ATLAS</small></span></a
+          ><span><span class="site-title" role="heading" aria-level="1">Tom’s Crossing</span><small>A TABLETOP ATLAS</small></span></a
         >
         <div class="reading-control">
           <span class="lock" aria-hidden="true">▣</span>
@@ -95,19 +95,9 @@
         </button>
       </header>
       <main>
-        <section class="map-panel" aria-label="Interactive tabletop map">
-          <div class="map-heading">
-            <span class="eyebrow">CHAPTER BY CHAPTER</span>
-            <h1>Follow the paths.<br />Keep your place.</h1>
-            <p>An imagined landscape. An evidenced journey.</p>
-          </div>
-          <div
-            id="map"
-            tabindex="0"
-            role="region"
-            aria-label="3D map. Drag to rotate, Shift drag or right drag to pan, scroll to zoom. Arrow keys rotate; Shift and arrows pan. Plus and minus zoom."
-          ></div>
-          <div id="map-labels" aria-label="Revealed locations"></div>
+        <section class="map-workspace" aria-label="Atlas board">
+          <div class="board-tools">
+            <span class="eyebrow">SCHEMATIC TERRAIN · NOT TO SCALE</span>
           <div class="map-toolbar" aria-label="Map controls">
             <button id="zoom-in" aria-label="Zoom in">+</button
             ><button id="zoom-out" aria-label="Zoom out">−</button><span></span
@@ -120,22 +110,25 @@
             ><button id="reset-view" aria-label="Reset map view">⟲</button>
             <button id="expand-map" aria-label="Expand map width" aria-pressed="false">↔</button>
           </div>
-          <div class="map-key">
-            <span class="key-line"></span><span>Selected entry</span
-            ><span class="key-dot"></span><span>Established position</span>
           </div>
-          <p class="map-disclaimer">
-            SCHEMATIC TERRAIN <span>·</span> NOT TO SCALE
-          </p>
-          <div class="map-instructions">
-            Drag to orbit <span>·</span> Shift-drag or right-drag to pan
-            <span>·</span> Scroll to zoom
-          </div>
+        <section class="map-panel" aria-label="Interactive tabletop map">
+          <div
+            id="map"
+            tabindex="0"
+            role="region"
+            aria-label="3D map. Drag to rotate, Shift drag or right drag to pan, scroll to zoom. Arrow keys rotate; Shift and arrows pan. Plus and minus zoom."
+          ></div>
+          <div id="map-labels" aria-label="Revealed locations"></div>
           <div id="map-fallback" hidden>
             <p>
               The 3D view needs WebGL. You can still explore every movement in
               the journal.
             </p>
+          </div>
+        </section>
+          <div class="board-notes">
+            <span>Drag to orbit · Shift-drag to pan · Scroll to zoom</span>
+            <details id="legend" hidden><summary>Character legend</summary><div class="map-key"></div></details>
           </div>
         </section>
         <aside class="journal" aria-label="Character journal">
@@ -163,26 +156,15 @@
             <label class="journal-control">Journal layer<select id="layer-select"><option value="journey">Journey and presence</option><option value="recollection">Earlier / reported recollections</option><option value="plan">Plans and rejected options</option><option value="spectral">Spectral / extraordinary events</option><option value="dream">Dreams</option><option value="all">All disclosed entries</option></select></label>
             <section id="comparison" aria-label="Chapter path selection" hidden>
               <div class="comparison-actions"><button id="show-all">Show everyone</button><button id="show-none">Clear selection</button></div>
+              <details id="comparison-options">
+              <summary id="comparison-summary">Choose paths</summary>
               <label class="path-character"><input type="checkbox" id="show-locations" />Show location names on the board</label>
               <p id="comparison-status" role="status"></p>
               <div id="path-characters"></div>
-              <p class="small-copy">Paths cover only this chapter and layer. Pieces mark each participant’s last located entry, not simultaneous or continuous presence. Plans and dreams never draw completed travel.</p>
+              <p class="small-copy">Paths cover only this chapter and layer. The current entry is fully visible, its earlier journal trail is softer, and other chapter paths are faint. Pieces mark observed positions, not simultaneous presence. Plans and dreams never draw completed travel.</p>
+              </details>
             </section>
-            <div class="character-row">
-              <button
-                id="character"
-                class="character-button"
-                aria-pressed="true"
-                title="Toggle selected route"
-              >
-                <span class="avatar">K</span
-                ><span
-                  ><strong>Kalin March</strong
-                  ><small>Selected character</small></span
-                ><span class="selected-mark">✓</span>
-              </button>
-            </div>
-            <label class="journal-control">Character or companion<select id="character-select"></select></label>
+            <label class="journal-control"><span id="character-select-label">Character or companion</span><select id="character-select"></select></label>
             <p id="layer-status" role="status"></p>
             <p id="empty-state" hidden>No entries in this layer. Choose a character with entries above, or another layer.</p>
             <div class="chapter-heading">
@@ -197,8 +179,8 @@
               ><button id="next" aria-label="Next movement">→</button>
             </div>
             <p id="journal-focus-status" class="small-copy" role="status" hidden></p>
+            <article id="entry-detail" aria-live="polite" tabindex="-1"></article>
             <ol id="entries" class="entries" aria-label="Movements"></ol>
-            <article id="entry-detail" aria-live="polite"></article>
           </div>
           <div class="journal-footer">
             <span class="source-mark" aria-hidden="true">≋</span>

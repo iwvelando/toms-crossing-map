@@ -1,6 +1,5 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { pieceStyle } from "./pieces.js";
 import { getChapterJournalFocus } from "./story.js";
 
@@ -240,46 +239,17 @@ export function createMap(container, labelRoot, onSelect, onViewChange) {
   const pawnRoot = new THREE.Group();
   scene.add(pawnRoot);
   pawnRoot.visible = false;
-  const pawnTemplate = new THREE.Group();
-  const brass = mat(palette.gold, { metalness: 0.65, roughness: 0.28 });
-  // Immediate lightweight fallback also survives an unavailable asset.
-  mesh(
-    new THREE.CylinderGeometry(0.33, 0.45, 0.16, 32),
-    brass,
-    0,
-    0.08,
-    0,
-    pawnTemplate,
-  );
-  mesh(new THREE.ConeGeometry(0.28, 0.8, 24), brass, 0, 0.52, 0, pawnTemplate);
-  mesh(new THREE.SphereGeometry(0.23, 24, 16), brass, 0, 1.0, 0, pawnTemplate);
-  new GLTFLoader().load(
-    `${import.meta.env.BASE_URL}models/kalin-pawn.glb`,
-    (gltf) => {
-      clearGroup(pawnTemplate);
-      pawnTemplate.add(gltf.scene);
-      gltf.scene.traverse((object) => {
-        if (object.isMesh) {
-          object.castShadow = true;
-          object.receiveShadow = true;
-        }
-      });
-      container.dataset.asset = "loaded";
-      if (currentView) update(currentView, currentShowCharacter, currentOverview);
-      requestRender();
-    },
-    undefined,
-    () => {
-      container.dataset.asset = "fallback";
-    },
-  );
+  container.dataset.asset = "procedural";
   const markerMaterial = mat(0xead6a1, { metalness: 0.2 });
+  const contextMarkerMaterial = mat(0xead6a1, { metalness: 0.2, transparent: true, opacity: 0.22, depthWrite: false });
+  const historyMarkerMaterial = mat(0xead6a1, { metalness: 0.2, transparent: true, opacity: 0.6, depthWrite: false });
   function clearGroup(group) {
     while (group.children.length) {
       const object = group.children[0];
       group.remove(object);
       object.traverse((child) => {
         child.geometry?.dispose();
+        if (child.material?.userData.disposable) child.material.dispose();
       });
     }
   }
@@ -327,9 +297,7 @@ export function createMap(container, labelRoot, onSelect, onViewChange) {
       box(x + side, y + 0.25, z, 0.05, 0.06, 1.3, materials.house, landmarks);
     }
   }
-  let labelItems = [],
-    currentView = null;
-  let currentOverview = null, currentShowCharacter = true;
+  let labelItems = [];
   let focusMarker = null;
   const routePaths = {
     "leaving-home": [
@@ -359,51 +327,41 @@ export function createMap(container, labelRoot, onSelect, onViewChange) {
     ],
   };
   const identityMaterials = new Map();
-  const ghostMaterials = new Map();
-  function identityMaterial(id, characters) {
-    if (!identityMaterials.has(id)) identityMaterials.set(id, mat(pieceStyle(id, characters).color, { metalness: 0.35, roughness: 0.4, emissive: pieceStyle(id, characters).color, emissiveIntensity: 0.15 }));
-    return identityMaterials.get(id);
+  function identityMaterial(id, characters, opacity = 1) {
+    const key = `${id}:${opacity}`;
+    if (!identityMaterials.has(key)) {
+      const color = pieceStyle(id, characters).color;
+      identityMaterials.set(key, mat(color, { metalness: 0.35, roughness: 0.4, emissive: color,
+        emissiveIntensity: 0.15, transparent: opacity < 1, opacity, depthWrite: opacity === 1 }));
+    }
+    return identityMaterials.get(key);
   }
-  function addPiece(entry, characters, offset, labeled, ghost = false) {
+  function addPiece(entry, characters, offset, labeled, opacity = 1) {
     const place = entry.locations.find(place => place.id === entry.position && Number.isFinite(place.x) && Number.isFinite(place.z));
     if (!place) return false;
     const identity = pieceStyle(entry.selected.id, characters);
-    let material = identityMaterial(entry.selected.id, characters);
-    if (ghost) {
-      if (!ghostMaterials.has(entry.selected.id)) {
-        const translucent = material.clone();
-        translucent.transparent = true;
-        translucent.opacity = 0.42;
-        translucent.depthWrite = false;
-        ghostMaterials.set(entry.selected.id, translucent);
-      }
-      material = ghostMaterials.get(entry.selected.id);
-    }
+    const material = identityMaterial(entry.selected.id, characters, opacity);
     const root = new THREE.Group();
     root.userData = { index: entry.index, characterId: entry.selected.id };
     pawnRoot.add(root);
     const x = place.x + offset[0], z = place.z + offset[1];
     root.position.set(x, elevation(x, z) + 0.12, z);
-    if (identity.shape === "orb") {
-      const model = pawnTemplate.clone(true);
-      model.traverse(object => {
-        if (object.isMesh) { object.geometry = object.geometry.clone(); object.material = material; }
-      });
-      root.add(model);
-    } else {
-      mesh(new THREE.CylinderGeometry(0.3, 0.44, 0.18, 24), material, 0, 0.09, 0, root);
-      mesh(new THREE.ConeGeometry(0.25, 0.8, 16), material, 0, 0.55, 0, root);
-      const head = identity.shape === "diamond" ? new THREE.OctahedronGeometry(0.31) :
-        identity.shape === "spire" ? new THREE.ConeGeometry(0.24, 0.5, 5) :
-        identity.shape === "cube" ? new THREE.BoxGeometry(0.4, 0.4, 0.4) : new THREE.TorusGeometry(0.23, 0.085, 8, 20);
-      mesh(head, material, 0, 1.03, 0, root);
-    }
-    if (ghost) root.traverse(object => { if (object.isMesh) object.castShadow = false; });
+    // Every participant shares the same geometric base and stem.
+    mesh(new THREE.CylinderGeometry(0.3, 0.44, 0.18, 24), material, 0, 0.09, 0, root);
+    mesh(new THREE.ConeGeometry(0.25, 0.8, 16), material, 0, 0.55, 0, root);
+    const head = identity.shape === "orb" ? new THREE.SphereGeometry(0.26, 16, 12) :
+      identity.shape === "diamond" ? new THREE.OctahedronGeometry(0.31) :
+      identity.shape === "spire" ? new THREE.ConeGeometry(0.24, 0.5, 5) :
+      identity.shape === "cube" ? new THREE.BoxGeometry(0.4, 0.4, 0.4) : new THREE.TorusGeometry(0.23, 0.085, 8, 20);
+    mesh(head, material, 0, 1.03, 0, root);
+    if (opacity < 1) root.traverse(object => { if (object.isMesh) object.castShadow = false; });
     if (!labeled) return true;
     const button = document.createElement("button");
     button.className = "map-label piece-label";
     button.dataset.character = entry.selected.id;
     button.dataset.position = place.id;
+    button.dataset.event = entry.current.id;
+    button.style.opacity = String(material.opacity);
     button.style.setProperty("--piece-color", identity.color);
     button.setAttribute("aria-label", `${entry.selected.name}, piece ${identity.number}, show last located entry`);
     button.onclick = () => onSelect(entry.index, entry.selected.id);
@@ -411,10 +369,10 @@ export function createMap(container, labelRoot, onSelect, onViewChange) {
     labelItems.push({ element: button, name: String(identity.number), number: identity.number, point: new THREE.Vector3(x, root.position.y + 1.55, z) });
     return true;
   }
-  function addJournalFocus(view, focus) {
-    const { location: place, ghost } = focus;
+  function addJournalFocus(view, focus, drawPiece) {
+    const { location: place } = focus;
     const identity = pieceStyle(view.selected.id, view.characters);
-    if (ghost) addPiece(view, view.characters, [0, 0], false, true);
+    if (drawPiece) addPiece(view, view.characters, [0, 0], false);
     const y = elevation(place.x, place.z);
     const marker = document.createElement("div");
     marker.className = "journal-focus-marker";
@@ -433,15 +391,19 @@ export function createMap(container, labelRoot, onSelect, onViewChange) {
     labelRoot.append(label);
     labelItems.unshift({ element: label, name: `◎ ${identity.number} · Journal`, number: identity.number, point: new THREE.Vector3(place.x, y + 1.65, place.z) });
   }
-  function update(view, showCharacter = true, overview = null) {
-    highlight(null);
+  function update(view, showCharacter = true, overview = null, trail = []) {
     requestRender();
-    currentView = view; currentOverview = overview; currentShowCharacter = showCharacter;
     clearGroup(journey); clearGroup(landmarks); clearGroup(pawnRoot);
     labelRoot.replaceChildren(); labelItems = []; focusMarker = null;
     pawnRoot.visible = Boolean(overview) || showCharacter;
     const entries = overview ? overview.entries : showCharacter && view.current ? [view] : [];
-    const locations = overview ? overview.locations : view.locations;
+    const historicalLocations = trail.flatMap(entry => entry.locations.map(place => ({ ...place, characterId: entry.selected.id })));
+    const locations = [...new Map([...(overview?.locations || []), ...historicalLocations, ...view.locations].map(place => [place.id, place])).values()];
+    const isActive = entry => entry.selected.id === view.selected?.id && entry.current?.id === view.current?.id;
+    const earlierIds = new Set(trail.map(entry => entry.current.id));
+    const entryOpacity = entry => isActive(entry) ? 1 : entry.selected.id === view.selected?.id && earlierIds.has(entry.current.id) ? 0.6 : 0.22;
+    const activePlaces = new Set(view.locations.map(place => place.id));
+    const earlierPlaces = new Set(historicalLocations.map(place => place.id));
     container.dataset.mode = overview ? "chapter" : "entry";
     container.dataset.event = view.current?.id || "";
     container.dataset.route = entries.flatMap(entry => entry.drawnRoute).join(",");
@@ -450,16 +412,28 @@ export function createMap(container, labelRoot, onSelect, onViewChange) {
     const focus = overview ? getChapterJournalFocus(view) : null;
     container.dataset.focusPosition = focus?.location.id || "";
     container.dataset.focusCharacter = focus ? view.selected.id : "";
-    container.dataset.focusGhost = String(Boolean(focus?.ghost));
+    container.dataset.focusGhost = "false";
+    container.dataset.focusRoute = overview ? view.drawnRoute.join(",") : "";
     for (const place of locations) {
       if (!Number.isFinite(place.x) || !Number.isFinite(place.z)) continue;
       const y = elevation(place.x, place.z);
-      mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.09, 28), markerMaterial, place.x, y + 0.055, place.z, landmarks);
+      const opacity = activePlaces.has(place.id) ? 1 : earlierPlaces.has(place.id) ? 0.6 : 0.22;
+      const firstLandmark = landmarks.children.length;
+      mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.09, 28), opacity === 1 ? markerMaterial : opacity === 0.6 ? historyMarkerMaterial : contextMarkerMaterial, place.x, y + 0.055, place.z, landmarks);
       if (place.id === "HOME-A") building(place.x - 0.55, place.z - 0.65);
       if (place.id === "PAD-B") paddock(place.x, place.z);
-      if (overview && !overview.showLocations) continue;
+      if (opacity < 1) for (const object of landmarks.children.slice(firstLandmark)) object.traverse(child => {
+        if (!child.isMesh) return;
+        child.castShadow = false;
+        if (child.material === contextMarkerMaterial || child.material === historyMarkerMaterial) return;
+        child.material = child.material.clone();
+        child.material.userData.disposable = true;
+        child.material.transparent = true; child.material.opacity = opacity; child.material.depthWrite = false;
+      });
+      if ((overview && !overview.showLocations) || (!overview && !activePlaces.has(place.id))) continue;
       const button = document.createElement("button");
       button.className = "map-label";
+      button.style.opacity = String(opacity);
       button.textContent = place.name;
       button.setAttribute("aria-label", `${place.name}, show movement`);
       button.onclick = () => onSelect(place.reveal, place.characterId);
@@ -468,7 +442,11 @@ export function createMap(container, labelRoot, onSelect, onViewChange) {
       labelItems.push({ element: button, name: place.name, number: labelItems.length + 1, point: new THREE.Vector3(place.x, y + 1.1, place.z) });
     }
     // Separate entries never imply a continuous connection between observations.
-    entries.forEach((entry, lane) => {
+    const drawingEntries = [...new Map([...entries, ...trail, ...(view.current ? [view] : [])].map(entry => [`${entry.selected.id}:${entry.current.id}`, entry])).values()];
+    const renderedRoutes = [];
+    drawingEntries.forEach((entry, lane) => {
+      const opacity = entryOpacity(entry);
+      const lift = drawingEntries.length === 1 ? 0 : isActive(entry) ? 0.65 : opacity === 0.6 ? 0.35 : lane % 8 * 0.04;
       if (entry.drawnRoute.length < 2) return;
       const event = entry.current;
       // Artistic bends are only valid for the original actor's full route.
@@ -482,14 +460,17 @@ export function createMap(container, labelRoot, onSelect, onViewChange) {
         const segments = Math.max(14, Math.ceil(Math.hypot(bx - ax, bz - az) * 8));
         for (let j = 0; j < segments; j++) {
           const t = j / segments, x = ax + (bx - ax) * t, z = az + (bz - az) * t;
-          sampled.push(new THREE.Vector3(x, elevation(x, z) + 0.25 + (overview ? lane % 8 * 0.06 : 0), z));
+          sampled.push(new THREE.Vector3(x, elevation(x, z) + 0.25 + lift, z));
         }
       }
       const [x, z] = points.at(-1);
-      sampled.push(new THREE.Vector3(x, elevation(x, z) + 0.25 + (overview ? lane % 8 * 0.06 : 0), z));
+      sampled.push(new THREE.Vector3(x, elevation(x, z) + 0.25 + lift, z));
       const curve = new THREE.CatmullRomCurve3(sampled, false, "centripetal");
-      mesh(new THREE.TubeGeometry(curve, sampled.length * 2, overview ? 0.07 : 0.06, 6, false), identityMaterial(entry.selected.id, view.characters), 0, 0, 0, journey);
+      const route = mesh(new THREE.TubeGeometry(curve, sampled.length * 2, opacity === 1 ? 0.08 : 0.05, 6, false), identityMaterial(entry.selected.id, view.characters, opacity), 0, 0, 0, journey);
+      route.castShadow = opacity === 1;
+      renderedRoutes.push({ character: entry.selected.id, event: entry.current.id, opacity: route.material.opacity });
     });
+    container.dataset.renderedRoutes = JSON.stringify(renderedRoutes);
     const lastLocated = new Map();
     for (const entry of entries) if (entry.locations.some(place => place.id === entry.position && Number.isFinite(place.x) && Number.isFinite(place.z))) lastLocated.set(entry.selected.id, entry);
     const groups = new Map();
@@ -501,19 +482,20 @@ export function createMap(container, labelRoot, onSelect, onViewChange) {
     for (const group of groups.values()) group.forEach((entry, index) => {
       const angle = index / group.length * Math.PI * 2;
       const radius = group.length > 1 ? 0.6 + group.length * 0.06 : 0;
-      if (addPiece(entry, view.characters, [Math.cos(angle) * radius, Math.sin(angle) * radius], Boolean(overview))) pieces++;
+      if (addPiece(entry, view.characters, [Math.cos(angle) * radius, Math.sin(angle) * radius], Boolean(overview), entryOpacity(entry))) pieces++;
     });
     container.dataset.pieces = String(pieces);
-    if (focus) addJournalFocus(view, focus);
-  }
-  function highlight(characterId) {
-    for (const [id, material] of identityMaterials) {
-      const faded = Boolean(characterId && id !== characterId);
-      material.opacity = faded ? 0.18 : 1;
-      if (material.transparent !== faded) { material.transparent = faded; material.needsUpdate = true; }
+    // Retain earlier observations in this participant's own journal order.
+    // Coalesce repeated places; another participant's entries have no shared clock.
+    const history = new Map();
+    for (const entry of trail) {
+      if (entry.position === view.position || entry.position === lastLocated.get(entry.selected.id)?.position) continue;
+      if (entry.locations.some(place => place.id === entry.position && Number.isFinite(place.x) && Number.isFinite(place.z)))
+        history.set(entry.position, entry);
     }
-    for (const label of labelRoot.querySelectorAll("[data-character]")) label.style.opacity = characterId && label.dataset.character !== characterId ? "0.25" : "1";
-    requestRender();
+    for (const entry of history.values()) addPiece(entry, view.characters, [0, 0], false, 0.6);
+    container.dataset.historyPositions = [...history.keys()].join(",");
+    if (focus) addJournalFocus(view, focus, ![...lastLocated.values()].some(isActive));
   }
   const raycaster = new THREE.Raycaster();
   let pointerStart = null;
@@ -639,8 +621,7 @@ export function createMap(container, labelRoot, onSelect, onViewChange) {
       focusMarker.element.style.top = `${(-p.y * 0.5 + 0.5) * container.clientHeight}px`;
       focusMarker.element.hidden = p.z > 1 || p.z < -1;
     }
-    const toolbar = container.parentElement.querySelector(".map-toolbar")?.getBoundingClientRect();
-    if (toolbar?.width && toolbar.height) occupied.push({ left: toolbar.left - bounds.left - 6, right: toolbar.right - bounds.left + 6, top: toolbar.top - bounds.top - 6, bottom: toolbar.bottom - bounds.top + 6 });
+    const labelBottom = container.clientHeight - 16;
     for (const { element, point, name, number } of labelItems) {
       const p = point.clone().project(camera);
       const compact =
@@ -660,7 +641,7 @@ export function createMap(container, labelRoot, onSelect, onViewChange) {
       const anchorX = x;
       const collides = (cx, cy) => occupied.some(r => cx + width / 2 + 5 > r.left && cx - width / 2 - 5 < r.right && cy + 5 > r.top && cy - height - 5 < r.bottom);
       if (piece) {
-        const minY = height + 150, maxY = container.clientHeight - 180;
+        const minY = height + 16, maxY = Math.max(minY, labelBottom);
         const baseY = THREE.MathUtils.clamp(y, minY, maxY);
         const candidates = [[0, 0]];
         for (let radius = 1; radius <= 7; radius++) for (let row = -radius; row <= radius; row++) for (let col = -radius; col <= radius; col++) {
@@ -750,5 +731,5 @@ export function createMap(container, labelRoot, onSelect, onViewChange) {
     controls.update();
     requestRender();
   }
-  return { update, zoom, reset, toggleTop, highlight, setTheme, getCamera, restoreCamera };
+  return { update, zoom, reset, toggleTop,  setTheme, getCamera, restoreCamera };
 }

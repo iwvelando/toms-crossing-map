@@ -352,7 +352,7 @@ main {
 }
 .entry-button[aria-current="step"] .entry-number {
   background: var(--ink);
-  color: #eee8d7;
+  color: var(--paper);
   border-color: var(--ink);
 }
 #entry-detail {
@@ -410,8 +410,8 @@ details p {
 .step-controls button {
   border: 1px solid #c7ccb9;
   background: transparent;
-  width: 38px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   color: var(--ink);
 }
 #step-count {
@@ -1087,6 +1087,7 @@ select:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
 .map-key { z-index: 3; max-width: min(75%, 620px); max-height: 100px; overflow: auto; flex-wrap: wrap; gap: 6px; padding: 8px; background: var(--legend-bg); border: 1px solid var(--line); }
 .legend-person { display: flex; align-items: center; gap: 6px; padding: 3px 6px; border: 0; background: none; color: var(--ink); font-size: 11px; min-height: 36px; }
 .legend-person:hover { background: var(--hover); }
+.legend-person[aria-current="true"] { background: var(--hover); box-shadow: inset 0 -2px var(--piece-color); }
 .map-label.piece-label { border-color: var(--piece-color); color: var(--piece-color); border-radius: 50%; width: 28px; height: 28px; padding: 6px 0; text-align: center; font-weight: bold; }
 .map-label.piece-label::after { background: var(--piece-color); transform-origin: top; transform: rotate(var(--leader-angle, 0rad)); opacity: .6; }
 .map-label.journal-focus-label { width: auto; border-radius: 3px; padding: 6px 9px; z-index: 2; box-shadow: 0 0 0 2px var(--label-bg), 0 3px 12px #0004; }
@@ -1120,3 +1121,90 @@ main.expanded-map { display: flex; flex-direction: column; height: auto; }
 .theme-controls button:disabled { opacity: .6; }
 @media (min-width: 721px) and (max-width: 1100px) { .masthead { gap: 12px; padding-inline: 20px; } .reading-control { padding-left: 12px; } .theme-controls { gap: 3px; } .theme-controls button { padding-inline: 6px; } }
 @media (max-width: 720px) { .theme-controls { order: 2; margin-left: auto; } .theme-controls button { min-height: 44px; } .quiet-button { order: 2; margin-left: 0; } .reading-control { order: 3; } }
+
+/* The scene stays unobstructed; tools and the optional key live outside it. */
+#comparison-options { border-block: 1px solid var(--line); margin-top: 10px; }
+#comparison-summary { padding: 13px 0; font-size: 12px; }
+.comparison-actions button { flex: 1; }
+.chapter-heading { padding: 15px 0 4px; }
+.chapter-heading h2 { font-size: 27px; }
+.step-controls { position: sticky; top: 0; z-index: 5; margin: 12px 0; padding: 8px 0; background: var(--paper); border-bottom: 1px solid var(--line); }
+#entries { margin: 24px 0; border-top: 1px solid var(--line); padding-top: 12px; }
+.map-workspace { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.map-workspace > .map-panel { flex: 1; min-height: 300px; }
+.board-tools { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px 16px; padding: 10px 20px; border-bottom: 1px solid var(--line); background: var(--paper); }
+.board-tools .eyebrow { font-size: 9px; letter-spacing: 1px; }
+.board-tools .map-toolbar { position: static; flex-direction: row; padding: 0; border: 0; box-shadow: none; background: transparent; }
+.board-tools .map-toolbar button { width: 44px; height: 44px; }
+.board-tools .map-toolbar span { width: 1px; height: 24px; margin: 10px 4px; }
+.board-notes { padding: 12px 20px; font-size: 10px; line-height: 1.6; color: var(--muted); background: var(--paper); border-top: 1px solid var(--line); }
+#legend { margin-top: 6px; }
+#legend summary { min-height: 44px; padding: 12px 0; font-size: 12px; }
+#legend .map-key { position: static; display: flex; flex-wrap: wrap; max-width: none; max-height: none; overflow: visible; padding: 4px 0; background: none; border: 0; }
+main:has(#legend[open]:not([hidden])) { height: auto; }
+main:has(#legend[open]:not([hidden])) .map-workspace > .map-panel { flex: none; height: max(440px, calc(100svh - 310px)); }
+.legend-person { min-height: 44px; text-align: left; }
+.expanded-map .map-workspace { width: 100%; }
+.expanded-map .map-workspace > .map-panel { flex: none; height: max(600px, 80svh); }
+@media (max-width: 720px) {
+  .map-workspace > .map-panel { flex: none; height: 440px; }
+  .board-tools { padding: 8px 16px; }
+  .board-notes { padding: 10px 16px; }
+}
+
+/* One menu treatment for chapter, map mode, layer and journal selection. */
+.journal-control::after { content: none; }
+.picker-trigger { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; min-height: 44px; margin-top: 7px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 0; background: var(--paper); color: var(--ink); text-align: left; font: 13px/1.5 Arial, sans-serif; }
+.picker-trigger::after { content: "⌄"; flex-shrink: 0; }
+.picker-trigger[aria-expanded="true"]::after { content: "⌃"; }
+.picker-options, #chapter-options.picker-options { position: fixed; inset: auto; margin: 0; padding: 6px; box-sizing: border-box; list-style: none; border: 1px solid var(--label-border); background: var(--paper); color: var(--ink); box-shadow: 0 12px 28px #0003; overflow-y: auto; overscroll-behavior: contain; }
+.picker-options [role="option"], #chapter-options.picker-options [role="option"] { display: block; padding: 13px 12px; min-height: 48px; border: 1px solid transparent; color: var(--ink); font: 14px/1.5 Arial, sans-serif; cursor: pointer; overflow-wrap: anywhere; }
+.picker-options [role="option"] + [role="option"], #chapter-options.picker-options [role="option"] + [role="option"] { border-top-color: var(--line); }
+.picker-options [aria-selected="true"], #chapter-options.picker-options [aria-selected="true"] { background: var(--option-selected); }
+.picker-options [role="option"].focused, #chapter-options.picker-options [role="option"].focused { border-color: var(--label-border); background: var(--hover); }
+
+/* A consistent reading scale: prose, controls, supporting text, then short labels.
+   Keep this scale on small screens; let content wrap instead of shrinking it. */
+:root { --text-reading: 1.0625rem; --text-control: 1rem; --text-support: .875rem; --text-caption: .75rem; }
+.journal { line-height: 1.5; }
+.journal-control, .picker-label, .entry-time, .mode, .chapter-reference,
+.chapter-heading p, .journal-footer p, .board-notes, .footer-credit p,
+.footer-notices, .quiet-button, .legend-person, .path-character,
+#comparison-status, #layer-status, #comparison-summary, #legend summary,
+#entry-detail .participants, #entry-detail .place-sequence {
+  font-size: var(--text-support);
+  line-height: 1.6;
+}
+.small-copy, details p { font-size: var(--text-support) !important; line-height: 1.6; }
+details { font-size: var(--text-support); }
+.picker-trigger, #chapter-limit, .picker-options [role="option"],
+#chapter-options.picker-options [role="option"], .entry-button,
+.primary-button, .comparison-actions button { font-size: var(--text-control); line-height: 1.5; }
+#entry-detail p, #locked-state p, dialog p { font-size: var(--text-reading); line-height: 1.7; }
+.entry-time { display: block; }
+.entry-button { min-height: 44px; }
+.entry-number, .piece-badge, .path-character small, .theme-controls button,
+.brand small, .eyebrow, .journal-top .edition, .board-tools .eyebrow,
+.footer-identity .eyebrow, #step-count { font-size: var(--text-caption); }
+.eyebrow, .board-tools .eyebrow, #step-count { letter-spacing: 1.5px; }
+.brand small { letter-spacing: 2px; }
+.theme-controls button { min-height: 44px; }
+.map-label, .map-label.compact { font-size: var(--text-caption); }
+.map-label.piece-label { height: 30px; width: 30px; }
+.map-label.journal-focus-label { width: auto; }
+.page-footer .footer-motto { font-size: var(--text-support); line-height: 1.6; }
+:root[data-theme="light"] { --muted: #606958; --entry-text: #626b59; }
+@media (min-width: 1001px) { main { grid-template-columns: minmax(0, 1fr) 400px; } }
+@media (min-width: 1500px) { main { grid-template-columns: minmax(0, 1fr) 420px; } }
+@media (max-width: 1000px) {
+  .masthead { height: auto; min-height: 108px; flex-wrap: wrap; padding-block: 16px; }
+  .reading-control { order: 3; width: 100%; padding: 12px 0 0; border-left: 0; border-top: 1px solid var(--line); }
+  .theme-controls { margin-left: auto; }
+  .quiet-button { order: 2; font-size: 0; }
+}
+@media (max-width: 720px) {
+  .chapter-picker { display: block; }
+  .picker-label { margin-bottom: 4px; }
+  .reading-control { align-items: flex-start; }
+  .lock { margin-top: 4px; }
+}
