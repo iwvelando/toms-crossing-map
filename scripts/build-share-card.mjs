@@ -8,9 +8,9 @@ try {
     executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE,
     args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-webgl"],
   });
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce", colorScheme: "dark" });
   await page.goto("http://127.0.0.1:4174/");
-  await page.locator('#map[data-asset="loaded"]').waitFor();
+  await page.locator('#map[data-asset="procedural"]').waitFor();
   await page.evaluate(() => {
     for (const el of document.querySelectorAll(".map-heading,.map-toolbar,.map-key,.map-disclaimer,.map-instructions"))
       el.style.display = "none";
@@ -20,9 +20,9 @@ try {
   await page.setViewportSize({ width: 1200, height: 630 });
   await page.evaluate((png) => {
     document.body.replaceChildren();
-    document.body.style.cssText = "margin:0;background:#242c26;color:#f2eddf;min-height:0";
+    document.body.style.cssText = "margin:0;background:#0b1522;color:#f2eddf;min-height:0";
     const card = document.createElement("div");
-    card.style.cssText = "width:1200px;height:630px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#242c26";
+    card.style.cssText = "width:1200px;height:630px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#0b1522";
     const title = document.createElement("h1");
     title.textContent = "Tom’s Crossing";
     title.style.cssText = "font:56px Georgia,serif;margin:0;color:#f2eddf";
@@ -42,7 +42,7 @@ try {
     document.body.replaceChildren();
     const icon = document.createElement("img");
     icon.src = "/favicon.svg";
-    icon.style.cssText = "display:block;width:180px;height:180px;box-sizing:border-box;padding:20px;background:#242c26";
+    icon.style.cssText = "display:block;width:180px;height:180px;box-sizing:border-box;padding:20px;background:#0b1522";
     document.body.append(icon);
     return icon.decode();
   });

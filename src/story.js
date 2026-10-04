@@ -59,3 +59,42 @@ export function getView(limit, step, characterId = "K", data = initial, layer = 
     traversed: current ? [current] : [], route, drawnRoute: draw ? route : [], position, selected,
     chapters: safe ? data.chapters.filter(c => c.id <= safe) : [] };
 }
+
+// Counts and comparison reuse the same per-participant disclosure projection.
+export function getLayerCharacters(limit, data = initial, layer = "all", chapterOnly = false) {
+  return getView(limit, 0, "", data, layer).characters.map(person => {
+    const events = getView(limit, 0, person.id, data, layer).events;
+    return { ...person, count: events.filter(event => !chapterOnly || event.chapter === limit).length };
+  });
+}
+
+export function getChapterOverview(limit, characterIds, data = initial, layer = "all") {
+  const characters = getLayerCharacters(limit, data, layer, true);
+  const chosen = new Set(characterIds);
+  const entries = characters.filter(person => chosen.has(person.id)).flatMap(person => {
+    const view = getView(limit, 0, person.id, data, layer);
+    return view.events.flatMap((event, index) => event.chapter === limit ? [getView(limit, index, person.id, data, layer)] : []);
+  });
+  const places = new Map();
+  for (const entry of entries) for (const place of entry.locations) {
+    if (!places.has(place.id)) places.set(place.id, { ...place, characterId: entry.selected.id, reveal: entry.index });
+  }
+  return { characters, entries, locations: [...places.values()] };
+}
+
+// History follows this journal's order and filtering, never another person's clock.
+export function getJournalTrail(view, data = initial, layer = "all", chapterOnly = false) {
+  if (!view.current || !view.selected) return [];
+  const limit = view.chapters.at(-1)?.id ?? 0;
+  return view.events.slice(0, view.index).flatMap((event, index) =>
+    !chapterOnly || event.chapter === limit ? [getView(limit, index, view.selected.id, data, layer)] : []);
+}
+
+// Journal focus is an observation from this entry, never a carried-forward position.
+export function getChapterJournalFocus(view) {
+  if (!view.selected || !view.current || view.current.chapter !== view.chapters.at(-1)?.id) return null;
+  const location = view.locations.find(place => place.id === view.position && Number.isFinite(place.x) && Number.isFinite(place.z));
+  if (!location) return null;
+  const final = view.events.findLast(event => event.chapter === view.current.chapter);
+  return { location, ghost: final?.id !== view.current.id };
+}

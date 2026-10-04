@@ -11,7 +11,7 @@ test("chapter controls and journal fit a narrow screen", async ({ page }, testIn
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(page.viewportSize().width);
   await page.getByRole("option", { name: /^Chapter One/ }).click();
-  for (const selector of ["#character-select", "#layer-select"]) {
+  for (const selector of ["#character-select-trigger", "#layer-select-trigger"]) {
     await expect(page.locator(selector)).toBeVisible();
     expect((await page.locator(selector).boundingBox()).height).toBeGreaterThanOrEqual(44);
   }
@@ -21,14 +21,15 @@ test("chapter controls and journal fit a narrow screen", async ({ page }, testIn
     await page.screenshot({ path: `test-results/${testInfo.project.name}-movement-${i}.png`, fullPage: true });
     if (i < 2) await page.getByRole("button", { name: "Next movement" }).click();
   }
-  await page.locator("#character").click();
   await overflow();
   await page.locator("#about-button").click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await overflow();
   await page.locator("#close-about").click();
   await page.reload();
-  await expect(page.locator("#locked-state")).toBeVisible();
+  await expect(page.locator("#unlocked-state")).toBeVisible();
+  await expect(page.locator("#character")).toHaveCount(0);
+  await expect(page.locator("#map")).toHaveAttribute("data-pieces", "1");
 });
 
 for (const { chapter, batch, steps } of chapterCases) {

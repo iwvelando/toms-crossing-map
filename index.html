@@ -3,7 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#242c26" />
+    <meta name="theme-color" content="#0b1522" />
+    <script src="/theme-init.js"></script>
     <meta
       name="description"
       content="An unofficial fan atlas of Tom’s Crossing by Mark Z. Danielewski. Explore character journeys on an imagined tabletop map, chapter by chapter."
@@ -33,7 +34,7 @@
       <header class="masthead">
         <a class="brand" href="./" aria-label="Tom’s Crossing, reset atlas"
           ><span class="brand-mark" aria-hidden="true">T<span>╱</span>C</span
-          ><span>Tom’s Crossing<small>A TABLETOP ATLAS</small></span></a
+          ><span><span class="site-title" role="heading" aria-level="1">Tom’s Crossing</span><small>A TABLETOP ATLAS</small></span></a
         >
         <div class="reading-control">
           <span class="lock" aria-hidden="true">▣</span>
@@ -85,24 +86,18 @@
             </ul>
           </div>
         </div>
+        <div class="theme-controls" role="group" aria-label="Color theme">
+          <button id="theme-toggle" aria-label="Dark theme" aria-pressed="false">☀ Light</button>
+          <button id="theme-system" aria-label="Use system theme" title="Follow the system theme">Auto</button>
+        </div>
         <button class="quiet-button" id="about-button">
           About the map <span aria-hidden="true">↗</span>
         </button>
       </header>
       <main>
-        <section class="map-panel" aria-label="Interactive tabletop map">
-          <div class="map-heading">
-            <span class="eyebrow">CHAPTER BY CHAPTER</span>
-            <h1>Follow the paths.<br />Keep your place.</h1>
-            <p>An imagined landscape. An evidenced journey.</p>
-          </div>
-          <div
-            id="map"
-            tabindex="0"
-            role="region"
-            aria-label="3D map. Drag to rotate, Shift drag or right drag to pan, scroll to zoom. Arrow keys rotate; Shift and arrows pan. Plus and minus zoom."
-          ></div>
-          <div id="map-labels" aria-label="Revealed locations"></div>
+        <section class="map-workspace" aria-label="Atlas board">
+          <div class="board-tools">
+            <span class="eyebrow">SCHEMATIC TERRAIN · NOT TO SCALE</span>
           <div class="map-toolbar" aria-label="Map controls">
             <button id="zoom-in" aria-label="Zoom in">+</button
             ><button id="zoom-out" aria-label="Zoom out">−</button><span></span
@@ -113,23 +108,27 @@
             >
               ▱</button
             ><button id="reset-view" aria-label="Reset map view">⟲</button>
+            <button id="expand-map" aria-label="Expand map width" aria-pressed="false">↔</button>
           </div>
-          <div class="map-key">
-            <span class="key-line"></span><span>Selected entry</span
-            ><span class="key-dot"></span><span>Established position</span>
           </div>
-          <p class="map-disclaimer">
-            SCHEMATIC TERRAIN <span>·</span> NOT TO SCALE
-          </p>
-          <div class="map-instructions">
-            Drag to orbit <span>·</span> Shift-drag or right-drag to pan
-            <span>·</span> Scroll to zoom
-          </div>
+        <section class="map-panel" aria-label="Interactive tabletop map">
+          <div
+            id="map"
+            tabindex="0"
+            role="region"
+            aria-label="3D map. Drag to rotate, Shift drag or right drag to pan, scroll to zoom. Arrow keys rotate; Shift and arrows pan. Plus and minus zoom."
+          ></div>
+          <div id="map-labels" aria-label="Revealed locations"></div>
           <div id="map-fallback" hidden>
             <p>
               The 3D view needs WebGL. You can still explore every movement in
               the journal.
             </p>
+          </div>
+        </section>
+          <div class="board-notes">
+            <span>Drag to orbit · Shift-drag to pan · Scroll to zoom</span>
+            <details id="legend" hidden><summary>Character legend</summary><div class="map-key"></div></details>
           </div>
         </section>
         <aside class="journal" aria-label="Character journal">
@@ -153,36 +152,35 @@
             </p>
           </div>
           <div id="unlocked-state" hidden>
-            <div class="character-row">
-              <button
-                id="character"
-                class="character-button"
-                aria-pressed="true"
-                title="Toggle selected route"
-              >
-                <span class="avatar">K</span
-                ><span
-                  ><strong>Kalin March</strong
-                  ><small>Selected character</small></span
-                ><span class="selected-mark">✓</span>
-              </button>
-            </div>
-            <label class="journal-control">Character or companion<select id="character-select"></select></label>
+            <label class="journal-control">Map view<select id="map-mode"><option value="entry">Selected journal entry</option><option value="chapter">Compare paths in this chapter</option></select></label>
             <label class="journal-control">Journal layer<select id="layer-select"><option value="journey">Journey and presence</option><option value="recollection">Earlier / reported recollections</option><option value="plan">Plans and rejected options</option><option value="spectral">Spectral / extraordinary events</option><option value="dream">Dreams</option><option value="all">All disclosed entries</option></select></label>
-            <p id="empty-state" hidden>No entries in this layer. Choose another layer or character.</p>
+            <section id="comparison" aria-label="Chapter path selection" hidden>
+              <div class="comparison-actions"><button id="show-all">Show everyone</button><button id="show-none">Clear selection</button></div>
+              <details id="comparison-options">
+              <summary id="comparison-summary">Choose paths</summary>
+              <label class="path-character"><input type="checkbox" id="show-locations" />Show location names on the board</label>
+              <p id="comparison-status" role="status"></p>
+              <div id="path-characters"></div>
+              <p class="small-copy">Paths cover only this chapter and layer. The current entry is fully visible, its earlier journal trail is softer, and other chapter paths are faint. Pieces mark observed positions, not simultaneous presence. Plans and dreams never draw completed travel.</p>
+              </details>
+            </section>
+            <label class="journal-control"><span id="character-select-label">Character or companion</span><select id="character-select"></select></label>
+            <p id="layer-status" role="status"></p>
+            <p id="empty-state" hidden>No entries in this layer. Choose a character with entries above, or another layer.</p>
             <div class="chapter-heading">
               <span class="eyebrow"></span>
               <h2></h2>
               <p></p>
             </div>
             <p id="load-status" role="status"></p>
-            <ol id="entries" class="entries" aria-label="Movements"></ol>
-            <article id="entry-detail" aria-live="polite"></article>
             <div class="step-controls">
               <button id="previous" aria-label="Previous movement">←</button
               ><span id="step-count"></span
               ><button id="next" aria-label="Next movement">→</button>
             </div>
+            <p id="journal-focus-status" class="small-copy" role="status" hidden></p>
+            <article id="entry-detail" aria-live="polite" tabindex="-1"></article>
+            <ol id="entries" class="entries" aria-label="Movements"></ol>
           </div>
           <div class="journal-footer">
             <span class="source-mark" aria-hidden="true">≋</span>
@@ -231,7 +229,7 @@
       </p>
       <p>
         The carved hills, vegetation, buildings, distances, and bends are
-        imagined scenery. Gold lines show the order of a journey, not a surveyed
+        imagined scenery. Colored lines show the order of a journey, not a surveyed
         trail. Journal notes explain where the geography is uncertain.
       </p>
       <p>
@@ -241,8 +239,8 @@
       </p>
       <p>
         The atlas covers disclosed movements through part of Chapter Twelve.
-        The final chapter is partial. Reading limits reset on reload; select only
-        a chapter you have reached. Historical accounts, plans, dreams and
+        The final chapter is partial. Your reading limit and selections are saved
+        in this browser; select only a chapter you have reached. Historical accounts, plans, dreams and
         spectral events have separate journal layers. A last observation does
         not imply continuous presence afterward.
       </p>

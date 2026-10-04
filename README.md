@@ -8,9 +8,15 @@ The atlas is being built from one reader’s audiobook listening. Character and 
 
 ## Explore
 
+[Open the deployed atlas](https://toms-crossing-map.isaacvelando.com/).
+
 Choose the chapter you’ve finished, then select a journal entry or use the previous/next buttons. Drag to orbit, **Shift-drag or right-drag to pan**, and scroll to zoom. On touch screens, use one finger to orbit and two fingers to pan or zoom. Keyboard users can focus the map and use arrows to rotate, Shift + arrows to pan, +/− to zoom, and Home to reset.
 
-The chapter menu supports arrows, Home/End, first-letter navigation, Enter/Space to confirm, and Escape to cancel. Exploring an option does not reveal its content until you confirm it. Select a character or companion and a journal layer; the character button hides or shows the selected route. Earlier accounts, plans, spectral events and dreams remain distinct. Choosing “Before Chapter One” removes all story labels and journal entries. Every reload starts with this boundary closed.
+All dropdown menus share the atlas styling and support arrows, Home/End, type-ahead, Enter/Space to confirm, and Escape to cancel. Exploring an option does not reveal its content until you confirm it. Select a journal layer, then a character or companion. Character options show entry counts and put matching people first; selecting Dreams takes you directly to a participant with dream entries. The followed character’s selected entry is always visible. Earlier accounts, plans, spectral events and dreams remain distinct. Choosing “Before Chapter One” removes all story labels and journal entries. The reading limit, selected character and entry, journal layer, comparison choices, location-label setting, legend visibility, board layout, map camera and journal disclosure panel are saved in this browser and restored automatically on reload. A new browser or invalid saved state starts before Chapter One. Selecting “Before Chapter One” also saves the closed boundary. URL parameters cannot advance it.
+
+Choose **Compare paths in this chapter** to select any set of participants, or use **Show everyone**. Comparison covers only the chapter at the reading limit and the chosen layer. Matching route colors, distinct piece shapes, and numbered badges identify participants; the optional **Character legend** below the board opens their journals. Its full rows wrap without covering the scene. Location names are optional in comparison. Use **Expand map width** for a wider board. In both modes, the selected journal entry’s route and piece are fully opaque, while that character’s earlier routes and mapped positions stay visible at 60% opacity. Entry mode retains history through the selected entry; comparison limits history to the chosen chapter. Other comparison entries stay at 22% opacity. Repeated historical positions are combined, and separate routes are never joined across unobserved gaps. These marks do not imply simultaneous or continuous presence. Different characters’ journals do not share a synchronized timeline. The selected entry has a target marker and numbered Journal badge at its own mapped location. The marker pulses briefly, with a still marker for reduced-motion preferences. Unlocated entries remain journal-only. Previous/next controls stay in the journal above the entry text. Map tools sit outside the visualization; the scene has no navigation panel or heading overlay. The dark, starry setting and taller carved mountain ranges remain illustrative.
+
+The theme follows your system by default. Use the **Light / Dark** button to switch and save a preference, or **Auto** to follow the system again. Both the interface and the tabletop lighting change with the theme. Blocked or full local storage leaves the atlas usable for the current visit.
 
 ## Run locally
 
@@ -38,7 +44,7 @@ Exhaustive checks derive their cases from the public chapter catalog and visit a
 
 ## Interpretation and scope
 
-The board is schematic. Coordinates, elevation, decorative trees/buildings, distances, and precise path bends are artistic staging. Lines communicate the selected entry's narrated order; separate recollections and spectral events use distinct colors. Plans and dreams do not draw completed paths. The journal explains uncertainties. The pawn is a symbolic game piece, not a depiction of the character’s appearance.
+The board is schematic. Coordinates, elevation, decorative trees/buildings, distances, and precise path bends are artistic staging. Lines communicate narrated order within each separate entry; colors identify participants, while the journal states each entry’s classification. Plans and dreams do not draw completed paths. The journal explains uncertainties. Numbered pieces use individual colors and five abstract shapes, with the numbers distinguishing larger casts. Every piece uses the same geometric base and stem with a distinct head. They are symbolic game pieces, not depictions of characters’ appearances.
 
 `src/chapters/` contains reviewed, reader-facing paraphrases in separate chapter payloads. `src/story.js` projects only the selected disclosure boundary; `src/chapters.js` loads payloads after explicit chapter selection. Private research, transcripts, timing references, and working notes must remain outside published source and production assets. The root scratch files and private evidence notes are ignored; `npm test` checks that they are absent from the public candidate file set, including accidentally staged files. Do not force-add ignored research files.
 
@@ -52,7 +58,7 @@ See [the source-update guide](docs/source-updates.md) for commands and the appen
 
 ## Assets and Git
 
-Commit `public/models/kalin-pawn.glb` with ordinary Git: it is approximately 76 KB and does not need Git Large File Storage (LFS). `.gitattributes` marks GLB files as binary. The editable Blender recipe is `scripts/create-pawn.py`; no Blender installation is needed to build the site from the committed model. Keep `dist/`, dependencies, test output, and generated notices ignored. Commit `package-lock.json`.
+The original `public/models/kalin-pawn.glb` and its Blender recipe, `scripts/create-pawn.py`, are retained as design assets. The runtime now builds every character piece from consistent local Three.js geometry and makes no model downloads. Keep the small GLB in ordinary Git; no Git Large File Storage (LFS) or Blender installation is needed. Keep `dist/`, dependencies, test output, and generated notices ignored. Commit `package-lock.json`.
 
 ## Hosting
 

@@ -1,10 +1,11 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { pieceStyle } from "./pieces.js";
+import { getChapterJournalFocus } from "./story.js";
 
 const palette = {
-  ground: 0x7f8b63,
-  wood: 0x463a28,
+  ground: 0x40515b,
+  wood: 0x302c29,
   trim: 0xc2a16b,
   gold: 0xe9b754,
 };
@@ -18,7 +19,7 @@ function inPolygon(x, z, vertices) {
   }
   return inside;
 }
-export function createMap(container, labelRoot, onSelect) {
+export function createMap(container, labelRoot, onSelect, onViewChange) {
   const scene = new THREE.Scene();
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   let renderPending = false;
@@ -52,8 +53,9 @@ export function createMap(container, labelRoot, onSelect) {
     requestRender();
   }
   reset();
-  scene.add(new THREE.HemisphereLight(0xf6f0da, 0x546846, 2.6));
-  const sun = new THREE.DirectionalLight(0xffedca, 3.7);
+  const ambient = new THREE.HemisphereLight(0xc7dffa, 0x384450, 2.4);
+  scene.add(ambient);
+  const sun = new THREE.DirectionalLight(0xd4e5fa, 3.4);
   sun.position.set(-18, 30, 12);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
@@ -77,7 +79,7 @@ export function createMap(container, labelRoot, onSelect) {
     ground: mat(palette.ground),
     wood: mat(palette.wood),
     trim: mat(palette.trim, { metalness: 0.25 }),
-    tree: mat(0x465b38),
+    tree: mat(0x334e49),
     trunk: mat(0x5d4a30),
     stone: mat(0x8c947b),
     house: mat(0xd6c7a3),
@@ -113,9 +115,11 @@ export function createMap(container, labelRoot, onSelect) {
   }
   const tiers = [];
   const terrainColors = [
-    0x87926a, 0x929973, 0x9ba07c, 0xa8aa84, 0xb2b08d, 0xbcb795, 0xc8c0a1,
-    0xd3c8ac, 0xdfd3b9,
+    0x4c5b63, 0x586670, 0x63727d, 0x6f7d87, 0x7b8890, 0x89949c, 0x97a2a7,
+    0xaab4b8, 0xc4cbd0,
   ];
+  const terrainMaterials = terrainColors.map(color => mat(color));
+  const terrainEdgeMaterial = new THREE.LineBasicMaterial({ color: 0x283b4b, transparent: true, opacity: 0.32 });
   for (let layer = 0; layer < 9; layer++) {
     const scale = Math.pow(0.84, layer);
     const vertices = Array.from({ length: 84 }, (_, i) => {
@@ -135,30 +139,45 @@ export function createMap(container, labelRoot, onSelect) {
     );
     shape.closePath();
     const geometry = new THREE.ExtrudeGeometry(shape, {
-      depth: 0.31,
+      depth: 0.52,
       bevelEnabled: false,
     });
     geometry.rotateX(-Math.PI / 2);
-    mesh(geometry, mat(terrainColors[layer]), 0, 0.1 + layer * 0.31, 0);
+    mesh(geometry, terrainMaterials[layer], 0, 0.1 + layer * 0.52, 0);
     const edgePoints = vertices.map(
-      ([x, z]) => new THREE.Vector3(x, 0.105 + (layer + 1) * 0.31, z),
+      ([x, z]) => new THREE.Vector3(x, 0.105 + (layer + 1) * 0.52, z),
     );
     edgePoints.push(edgePoints[0]);
     scene.add(
       new THREE.Line(
         new THREE.BufferGeometry().setFromPoints(edgePoints),
-        new THREE.LineBasicMaterial({
-          color: 0x646c49,
-          transparent: true,
-          opacity: 0.32,
-        }),
+        terrainEdgeMaterial,
       ),
     );
-    tiers.push(vertices);
+    tiers.push({ vertices, top: 0.1 + (layer + 1) * 0.52 });
+  }
+  // Additional carved ranges are decorative, not asserted geography.
+  for (const [cx, cz, rx, rz] of [[-10, -6, 5, 4], [9, 6, 5, 3]]) {
+    for (let tier = 0; tier < 7; tier++) {
+      const scale = Math.pow(0.78, tier);
+      const vertices = Array.from({ length: 48 }, (_, i) => {
+        const angle = i / 48 * Math.PI * 2;
+        const wave = 1 + 0.12 * Math.sin(angle * 5);
+        return [cx + Math.cos(angle) * rx * scale * wave, cz + Math.sin(angle) * rz * scale * wave];
+      });
+      const shape = new THREE.Shape();
+      vertices.forEach(([x, z], i) => i ? shape.lineTo(x, -z) : shape.moveTo(x, -z));
+      shape.closePath();
+      const geometry = new THREE.ExtrudeGeometry(shape, { depth: 0.65, bevelEnabled: false });
+      geometry.rotateX(-Math.PI / 2);
+      mesh(geometry, terrainMaterials[tier + 1], 0, 0.1 + tier * 0.65, 0);
+      tiers.push({ vertices, top: 0.1 + (tier + 1) * 0.65 });
+    }
   }
   function elevation(x, z) {
     let h = 0.1;
-    for (const polygon of tiers) if (inPolygon(x, z, polygon)) h += 0.31;
+    for (const tier of tiers) if (inPolygon(x, z, tier.vertices)) h = Math.max(h, tier.top ?? 0.1);
+    // Ranges may overlap the main massif; take the highest carved surface.
     return h;
   }
   // Seeded decorative vegetation; these are not asserted story locations.
@@ -220,44 +239,17 @@ export function createMap(container, labelRoot, onSelect) {
   const pawnRoot = new THREE.Group();
   scene.add(pawnRoot);
   pawnRoot.visible = false;
-  const brass = mat(palette.gold, { metalness: 0.65, roughness: 0.28 });
-  // Immediate lightweight fallback also survives an unavailable asset.
-  mesh(
-    new THREE.CylinderGeometry(0.33, 0.45, 0.16, 32),
-    brass,
-    0,
-    0.08,
-    0,
-    pawnRoot,
-  );
-  mesh(new THREE.ConeGeometry(0.28, 0.8, 24), brass, 0, 0.52, 0, pawnRoot);
-  mesh(new THREE.SphereGeometry(0.23, 24, 16), brass, 0, 1.0, 0, pawnRoot);
-  new GLTFLoader().load(
-    `${import.meta.env.BASE_URL}models/kalin-pawn.glb`,
-    (gltf) => {
-      clearGroup(pawnRoot);
-      pawnRoot.add(gltf.scene);
-      gltf.scene.traverse((object) => {
-        if (object.isMesh) {
-          object.castShadow = true;
-          object.receiveShadow = true;
-        }
-      });
-      container.dataset.asset = "loaded";
-      requestRender();
-    },
-    undefined,
-    () => {
-      container.dataset.asset = "fallback";
-    },
-  );
+  container.dataset.asset = "procedural";
   const markerMaterial = mat(0xead6a1, { metalness: 0.2 });
+  const contextMarkerMaterial = mat(0xead6a1, { metalness: 0.2, transparent: true, opacity: 0.22, depthWrite: false });
+  const historyMarkerMaterial = mat(0xead6a1, { metalness: 0.2, transparent: true, opacity: 0.6, depthWrite: false });
   function clearGroup(group) {
     while (group.children.length) {
       const object = group.children[0];
       group.remove(object);
       object.traverse((child) => {
         child.geometry?.dispose();
+        if (child.material?.userData.disposable) child.material.dispose();
       });
     }
   }
@@ -305,8 +297,8 @@ export function createMap(container, labelRoot, onSelect) {
       box(x + side, y + 0.25, z, 0.05, 0.06, 1.3, materials.house, landmarks);
     }
   }
-  let labelItems = [],
-    currentView = null;
+  let labelItems = [];
+  let focusMarker = null;
   const routePaths = {
     "leaving-home": [
       [-10, 5],
@@ -334,107 +326,176 @@ export function createMap(container, labelRoot, onSelect) {
       [8, -4.5],
     ],
   };
-  const pathMaterials = [
-    mat(0x96733e),
-    mat(palette.gold, { emissive: 0x8e601e, emissiveIntensity: 0.12 }),
-  ];
-  function update(view, showCharacter = true) {
-    const kind = view.current?.kind;
-    const color = kind === "recollection" ? 0x708d8a : kind === "spectral" ? 0x9a80bd : kind === "bodily relocation" ? 0x8d715e : palette.gold;
-    pathMaterials[1].color.setHex(color);
-    brass.color.setHex(color);
+  const identityMaterials = new Map();
+  function identityMaterial(id, characters, opacity = 1) {
+    const key = `${id}:${opacity}`;
+    if (!identityMaterials.has(key)) {
+      const color = pieceStyle(id, characters).color;
+      identityMaterials.set(key, mat(color, { metalness: 0.35, roughness: 0.4, emissive: color,
+        emissiveIntensity: 0.15, transparent: opacity < 1, opacity, depthWrite: opacity === 1 }));
+    }
+    return identityMaterials.get(key);
+  }
+  function addPiece(entry, characters, offset, labeled, opacity = 1) {
+    const place = entry.locations.find(place => place.id === entry.position && Number.isFinite(place.x) && Number.isFinite(place.z));
+    if (!place) return false;
+    const identity = pieceStyle(entry.selected.id, characters);
+    const material = identityMaterial(entry.selected.id, characters, opacity);
+    const root = new THREE.Group();
+    root.userData = { index: entry.index, characterId: entry.selected.id };
+    pawnRoot.add(root);
+    const x = place.x + offset[0], z = place.z + offset[1];
+    root.position.set(x, elevation(x, z) + 0.12, z);
+    // Every participant shares the same geometric base and stem.
+    mesh(new THREE.CylinderGeometry(0.3, 0.44, 0.18, 24), material, 0, 0.09, 0, root);
+    mesh(new THREE.ConeGeometry(0.25, 0.8, 16), material, 0, 0.55, 0, root);
+    const head = identity.shape === "orb" ? new THREE.SphereGeometry(0.26, 16, 12) :
+      identity.shape === "diamond" ? new THREE.OctahedronGeometry(0.31) :
+      identity.shape === "spire" ? new THREE.ConeGeometry(0.24, 0.5, 5) :
+      identity.shape === "cube" ? new THREE.BoxGeometry(0.4, 0.4, 0.4) : new THREE.TorusGeometry(0.23, 0.085, 8, 20);
+    mesh(head, material, 0, 1.03, 0, root);
+    if (opacity < 1) root.traverse(object => { if (object.isMesh) object.castShadow = false; });
+    if (!labeled) return true;
+    const button = document.createElement("button");
+    button.className = "map-label piece-label";
+    button.dataset.character = entry.selected.id;
+    button.dataset.position = place.id;
+    button.dataset.event = entry.current.id;
+    button.style.opacity = String(material.opacity);
+    button.style.setProperty("--piece-color", identity.color);
+    button.setAttribute("aria-label", `${entry.selected.name}, piece ${identity.number}, show last located entry`);
+    button.onclick = () => onSelect(entry.index, entry.selected.id);
+    labelRoot.append(button);
+    labelItems.push({ element: button, name: String(identity.number), number: identity.number, point: new THREE.Vector3(x, root.position.y + 1.55, z) });
+    return true;
+  }
+  function addJournalFocus(view, focus, drawPiece) {
+    const { location: place } = focus;
+    const identity = pieceStyle(view.selected.id, view.characters);
+    if (drawPiece) addPiece(view, view.characters, [0, 0], false);
+    const y = elevation(place.x, place.z);
+    const marker = document.createElement("div");
+    marker.className = "journal-focus-marker";
+    marker.setAttribute("aria-hidden", "true");
+    marker.style.setProperty("--piece-color", identity.color);
+    labelRoot.append(marker);
+    focusMarker = { element: marker, point: new THREE.Vector3(place.x, y + 0.3, place.z) };
+    const label = document.createElement("button");
+    label.className = "map-label piece-label journal-focus-label";
+    label.dataset.character = view.selected.id;
+    label.dataset.event = view.current.id;
+    label.dataset.position = place.id;
+    label.style.setProperty("--piece-color", identity.color);
+    label.setAttribute("aria-label", `${view.selected.name}, selected journal entry at ${place.name}`);
+    label.onclick = () => onSelect(view.index, view.selected.id);
+    labelRoot.append(label);
+    labelItems.unshift({ element: label, name: `◎ ${identity.number} · Journal`, number: identity.number, point: new THREE.Vector3(place.x, y + 1.65, place.z) });
+  }
+  function update(view, showCharacter = true, overview = null, trail = []) {
     requestRender();
-    currentView = view;
-    clearGroup(journey);
-    clearGroup(landmarks);
-    labelRoot.replaceChildren();
-    labelItems = [];
-    pawnRoot.visible = false;
+    clearGroup(journey); clearGroup(landmarks); clearGroup(pawnRoot);
+    labelRoot.replaceChildren(); labelItems = []; focusMarker = null;
+    pawnRoot.visible = Boolean(overview) || showCharacter;
+    const entries = overview ? overview.entries : showCharacter && view.current ? [view] : [];
+    const historicalLocations = trail.flatMap(entry => entry.locations.map(place => ({ ...place, characterId: entry.selected.id })));
+    const locations = [...new Map([...(overview?.locations || []), ...historicalLocations, ...view.locations].map(place => [place.id, place])).values()];
+    const isActive = entry => entry.selected.id === view.selected?.id && entry.current?.id === view.current?.id;
+    const earlierIds = new Set(trail.map(entry => entry.current.id));
+    const entryOpacity = entry => isActive(entry) ? 1 : entry.selected.id === view.selected?.id && earlierIds.has(entry.current.id) ? 0.6 : 0.22;
+    const activePlaces = new Set(view.locations.map(place => place.id));
+    const earlierPlaces = new Set(historicalLocations.map(place => place.id));
+    container.dataset.mode = overview ? "chapter" : "entry";
     container.dataset.event = view.current?.id || "";
-    container.dataset.route = view.drawnRoute.join(",");
-    container.dataset.kind = view.current?.kind || "";
-    container.dataset.position = view.position || "";
-    for (const place of view.locations) {
+    container.dataset.route = entries.flatMap(entry => entry.drawnRoute).join(",");
+    container.dataset.kind = overview ? "comparison" : view.current?.kind || "";
+    container.dataset.position = overview ? "" : view.position || "";
+    const focus = overview ? getChapterJournalFocus(view) : null;
+    container.dataset.focusPosition = focus?.location.id || "";
+    container.dataset.focusCharacter = focus ? view.selected.id : "";
+    container.dataset.focusGhost = "false";
+    container.dataset.focusRoute = overview ? view.drawnRoute.join(",") : "";
+    for (const place of locations) {
       if (!Number.isFinite(place.x) || !Number.isFinite(place.z)) continue;
       const y = elevation(place.x, place.z);
-      mesh(
-        new THREE.CylinderGeometry(0.2, 0.2, 0.09, 28),
-        markerMaterial,
-        place.x,
-        y + 0.055,
-        place.z,
-        landmarks,
-      );
+      const opacity = activePlaces.has(place.id) ? 1 : earlierPlaces.has(place.id) ? 0.6 : 0.22;
+      const firstLandmark = landmarks.children.length;
+      mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.09, 28), opacity === 1 ? markerMaterial : opacity === 0.6 ? historyMarkerMaterial : contextMarkerMaterial, place.x, y + 0.055, place.z, landmarks);
       if (place.id === "HOME-A") building(place.x - 0.55, place.z - 0.65);
       if (place.id === "PAD-B") paddock(place.x, place.z);
+      if (opacity < 1) for (const object of landmarks.children.slice(firstLandmark)) object.traverse(child => {
+        if (!child.isMesh) return;
+        child.castShadow = false;
+        if (child.material === contextMarkerMaterial || child.material === historyMarkerMaterial) return;
+        child.material = child.material.clone();
+        child.material.userData.disposable = true;
+        child.material.transparent = true; child.material.opacity = opacity; child.material.depthWrite = false;
+      });
+      if ((overview && !overview.showLocations) || (!overview && !activePlaces.has(place.id))) continue;
       const button = document.createElement("button");
       button.className = "map-label";
+      button.style.opacity = String(opacity);
       button.textContent = place.name;
       button.setAttribute("aria-label", `${place.name}, show movement`);
-      button.onclick = () => onSelect(place.reveal);
-      if (place.id === view.position)
-        button.classList.add("active");
+      button.onclick = () => onSelect(place.reveal, place.characterId);
+      if (!overview && place.id === view.position) button.classList.add("active");
       labelRoot.append(button);
-      labelItems.push({
-        element: button,
-        name: place.name,
-        number: labelItems.length + 1,
-        point: new THREE.Vector3(place.x, y + 1.1, place.z),
-      });
+      labelItems.push({ element: button, name: place.name, number: labelItems.length + 1, point: new THREE.Vector3(place.x, y + 1.1, place.z) });
     }
-    if (!view.current) return;
-    if (showCharacter)
-      for (const event of view.traversed) {
-        if (view.drawnRoute.length < 2) continue;
-        const points = routePaths[event.id] || view.drawnRoute.map(id => {
-          const place = view.locations.find(place => place.id === id);
-          return [place.x, place.z];
-        });
-        const sampled = [];
-        for (let i = 1; i < points.length; i++) {
-          const [ax, az] = points[i - 1],
-            [bx, bz] = points[i];
-          for (let j = 0; j < 14; j++) {
-            const t = j / 14,
-              x = ax + (bx - ax) * t,
-              z = az + (bz - az) * t;
-            sampled.push(new THREE.Vector3(x, elevation(x, z) + 0.19, z));
-          }
-        }
-        const [x, z] = points.at(-1);
-        sampled.push(new THREE.Vector3(x, elevation(x, z) + 0.19, z));
-        const curve = new THREE.CatmullRomCurve3(sampled, false, "centripetal");
-        mesh(
-          new THREE.TubeGeometry(curve, sampled.length * 2, 0.052, 6, false),
-          pathMaterials[Number(event.id === view.current.id)],
-          0,
-          0,
-          0,
-          journey,
-        );
-        // Small route beads imply sequence, without pretending to be surveyed trails.
-        for (let i = 8; i < sampled.length; i += 14) {
-          const p = sampled[i];
-          mesh(
-            new THREE.SphereGeometry(0.085, 8, 6),
-            markerMaterial,
-            p.x,
-            p.y + 0.02,
-            p.z,
-            journey,
-          );
+    // Separate entries never imply a continuous connection between observations.
+    const drawingEntries = [...new Map([...entries, ...trail, ...(view.current ? [view] : [])].map(entry => [`${entry.selected.id}:${entry.current.id}`, entry])).values()];
+    const renderedRoutes = [];
+    drawingEntries.forEach((entry, lane) => {
+      const opacity = entryOpacity(entry);
+      const lift = drawingEntries.length === 1 ? 0 : isActive(entry) ? 0.65 : opacity === 0.6 ? 0.35 : lane % 8 * 0.04;
+      if (entry.drawnRoute.length < 2) return;
+      const event = entry.current;
+      // Artistic bends are only valid for the original actor's full route.
+      const points = event.actors.includes(entry.selected.id) && entry.drawnRoute.join() === event.route.join() && routePaths[event.id] || entry.drawnRoute.map(id => {
+        const place = entry.locations.find(place => place.id === id);
+        return [place.x, place.z];
+      });
+      const sampled = [];
+      for (let i = 1; i < points.length; i++) {
+        const [ax, az] = points[i - 1], [bx, bz] = points[i];
+        const segments = Math.max(14, Math.ceil(Math.hypot(bx - ax, bz - az) * 8));
+        for (let j = 0; j < segments; j++) {
+          const t = j / segments, x = ax + (bx - ax) * t, z = az + (bz - az) * t;
+          sampled.push(new THREE.Vector3(x, elevation(x, z) + 0.25 + lift, z));
         }
       }
-    const destination = view.locations.find(
-      (place) => place.id === view.position && Number.isFinite(place.x) && Number.isFinite(place.z),
-    );
-    if (!destination) return;
-    pawnRoot.visible = showCharacter;
-    pawnRoot.position.set(
-      destination.x,
-      elevation(destination.x, destination.z) + 0.12,
-      destination.z,
-    );
+      const [x, z] = points.at(-1);
+      sampled.push(new THREE.Vector3(x, elevation(x, z) + 0.25 + lift, z));
+      const curve = new THREE.CatmullRomCurve3(sampled, false, "centripetal");
+      const route = mesh(new THREE.TubeGeometry(curve, sampled.length * 2, opacity === 1 ? 0.08 : 0.05, 6, false), identityMaterial(entry.selected.id, view.characters, opacity), 0, 0, 0, journey);
+      route.castShadow = opacity === 1;
+      renderedRoutes.push({ character: entry.selected.id, event: entry.current.id, opacity: route.material.opacity });
+    });
+    container.dataset.renderedRoutes = JSON.stringify(renderedRoutes);
+    const lastLocated = new Map();
+    for (const entry of entries) if (entry.locations.some(place => place.id === entry.position && Number.isFinite(place.x) && Number.isFinite(place.z))) lastLocated.set(entry.selected.id, entry);
+    const groups = new Map();
+    for (const entry of lastLocated.values()) {
+      if (!groups.has(entry.position)) groups.set(entry.position, []);
+      groups.get(entry.position).push(entry);
+    }
+    let pieces = 0;
+    for (const group of groups.values()) group.forEach((entry, index) => {
+      const angle = index / group.length * Math.PI * 2;
+      const radius = group.length > 1 ? 0.6 + group.length * 0.06 : 0;
+      if (addPiece(entry, view.characters, [Math.cos(angle) * radius, Math.sin(angle) * radius], Boolean(overview), entryOpacity(entry))) pieces++;
+    });
+    container.dataset.pieces = String(pieces);
+    // Retain earlier observations in this participant's own journal order.
+    // Coalesce repeated places; another participant's entries have no shared clock.
+    const history = new Map();
+    for (const entry of trail) {
+      if (entry.position === view.position || entry.position === lastLocated.get(entry.selected.id)?.position) continue;
+      if (entry.locations.some(place => place.id === entry.position && Number.isFinite(place.x) && Number.isFinite(place.z)))
+        history.set(entry.position, entry);
+    }
+    for (const entry of history.values()) addPiece(entry, view.characters, [0, 0], false, 0.6);
+    container.dataset.historyPositions = [...history.keys()].join(",");
+    if (focus) addJournalFocus(view, focus, ![...lastLocated.values()].some(isActive));
   }
   const raycaster = new THREE.Raycaster();
   let pointerStart = null;
@@ -459,8 +520,12 @@ export function createMap(container, labelRoot, onSelect) {
       ),
       camera,
     );
-    if (raycaster.intersectObject(pawnRoot, true).length)
-      onSelect(currentView.index);
+    const hit = raycaster.intersectObject(pawnRoot, true)[0];
+    if (hit) {
+      let piece = hit.object;
+      while (piece.parent && piece.parent !== pawnRoot) piece = piece.parent;
+      onSelect(piece.userData.index, piece.userData.characterId);
+    }
   });
   function zoom(factor) {
     camera.zoom = THREE.MathUtils.clamp(camera.zoom * factor, 0.65, 3);
@@ -549,31 +614,61 @@ export function createMap(container, labelRoot, onSelect) {
     renderPending = false;
     controls.update();
     const occupied = [];
+    const bounds = container.getBoundingClientRect();
+    if (focusMarker) {
+      const p = focusMarker.point.clone().project(camera);
+      focusMarker.element.style.left = `${(p.x * 0.5 + 0.5) * container.clientWidth}px`;
+      focusMarker.element.style.top = `${(-p.y * 0.5 + 0.5) * container.clientHeight}px`;
+      focusMarker.element.hidden = p.z > 1 || p.z < -1;
+    }
+    const labelBottom = container.clientHeight - 16;
     for (const { element, point, name, number } of labelItems) {
       const p = point.clone().project(camera);
       const compact =
-        container.clientWidth < 500 && !element.classList.contains("active");
+        container.clientWidth < 500 && !element.classList.contains("active") && !element.classList.contains("piece-label");
       element.textContent = compact ? String(number) : name;
       element.classList.toggle("compact", compact);
       const width = element.offsetWidth,
         height = element.offsetHeight;
-      const x = THREE.MathUtils.clamp(
+      let x = THREE.MathUtils.clamp(
         (p.x * 0.5 + 0.5) * container.clientWidth,
         width / 2 + 8,
         container.clientWidth - width / 2 - 8,
       );
       const anchorY = (-p.y * 0.5 + 0.5) * container.clientHeight;
       let y = anchorY;
-      for (let attempts = 0; attempts < 12; attempts++) {
-        const collision = occupied.find(
-          (r) =>
-            x + width / 2 + 5 > r.left &&
-            x - width / 2 - 5 < r.right &&
-            y + 5 > r.top &&
-            y - height - 5 < r.bottom,
-        );
-        if (!collision) break;
-        y = collision.top - 7;
+      const piece = element.classList.contains("piece-label");
+      const anchorX = x;
+      const collides = (cx, cy) => occupied.some(r => cx + width / 2 + 5 > r.left && cx - width / 2 - 5 < r.right && cy + 5 > r.top && cy - height - 5 < r.bottom);
+      if (piece) {
+        const minY = height + 16, maxY = Math.max(minY, labelBottom);
+        const baseY = THREE.MathUtils.clamp(y, minY, maxY);
+        const candidates = [[0, 0]];
+        for (let radius = 1; radius <= 7; radius++) for (let row = -radius; row <= radius; row++) for (let col = -radius; col <= radius; col++) {
+          if (Math.max(Math.abs(col), Math.abs(row)) === radius) candidates.push([col, row]);
+        }
+        let placed = false;
+        for (const [col, row] of candidates) {
+          const cx = THREE.MathUtils.clamp(anchorX + col * (width + 7), width / 2 + 8, container.clientWidth - width / 2 - 8);
+          const cy = THREE.MathUtils.clamp(baseY + row * (height + 8), minY, maxY);
+          if (!collides(cx, cy)) { x = cx; y = cy; placed = true; break; }
+        }
+        // A wide Journal badge can fill the nearby slots in a dense comparison.
+        // Search the entire label area before accepting an overlapping position.
+        if (!placed) {
+          const slots = [];
+          for (let cy = minY; cy <= maxY; cy += 7) for (let cx = width / 2 + 8; cx <= container.clientWidth - width / 2 - 8; cx += 7) {
+            if (!collides(cx, cy)) slots.push([cx, cy]);
+          }
+          slots.sort((a, b) => Math.hypot(a[0] - anchorX, a[1] - baseY) - Math.hypot(b[0] - anchorX, b[1] - baseY));
+          if (slots.length) [x, y] = slots[0];
+        }
+      } else {
+        for (let attempts = 0; attempts < 12; attempts++) {
+          const collision = occupied.find(r => x + width / 2 + 5 > r.left && x - width / 2 - 5 < r.right && y + 5 > r.top && y - height - 5 < r.bottom);
+          if (!collision) break;
+          y = collision.top - 7;
+        }
       }
       occupied.push({
         left: x - width / 2,
@@ -585,8 +680,9 @@ export function createMap(container, labelRoot, onSelect) {
       element.style.top = `${y}px`;
       element.style.setProperty(
         "--leader-height",
-        `${Math.max(12, anchorY - y + 12)}px`,
+        `${piece ? Math.hypot(anchorX - x, anchorY - y + 12) : Math.max(12, anchorY - y + 12)}px`,
       );
+      element.style.setProperty("--leader-angle", `${piece ? -Math.atan2(anchorX - x, anchorY - y + 12) : 0}rad`);
       element.hidden = p.z > 1 || p.z < -1;
     }
     renderer.render(scene, camera);
@@ -598,7 +694,7 @@ export function createMap(container, labelRoot, onSelect) {
     renderPending = true;
     requestAnimationFrame(render);
   }
-  controls.addEventListener("change", requestRender);
+  controls.addEventListener("change", () => { requestRender(); onViewChange?.(); });
   requestRender();
   renderer.domElement.addEventListener("webglcontextlost", (event) => {
     event.preventDefault();
@@ -608,5 +704,32 @@ export function createMap(container, labelRoot, onSelect) {
     document.querySelector("#map-fallback").hidden = true;
     requestRender();
   });
-  return { update, zoom, reset, toggleTop };
+  function setTheme(theme) {
+    const light = theme === "light";
+    ambient.color.setHex(light ? 0xf6f0da : 0xc7dffa);
+    ambient.groundColor.setHex(light ? 0x546846 : 0x384450);
+    ambient.intensity = light ? 2.6 : 2.4;
+    sun.color.setHex(light ? 0xffedca : 0xd4e5fa);
+    sun.intensity = light ? 3.7 : 3.4;
+    materials.ground.color.setHex(light ? 0x7f8b63 : palette.ground);
+    materials.wood.color.setHex(light ? 0x463a28 : palette.wood);
+    materials.tree.color.setHex(light ? 0x465b38 : 0x334e49);
+    const colors = light ? [0x87926a, 0x929973, 0x9ba07c, 0xa8aa84, 0xb2b08d, 0xbcb795, 0xc8c0a1, 0xd3c8ac, 0xdfd3b9] : terrainColors;
+    terrainMaterials.forEach((material, index) => material.color.setHex(colors[index]));
+    terrainEdgeMaterial.color.setHex(light ? 0x646c49 : 0x283b4b);
+    requestRender();
+  }
+  function getCamera() {
+    return { position: camera.position.toArray(), target: controls.target.toArray(), zoom: camera.zoom, overhead };
+  }
+  function restoreCamera(state) {
+    camera.position.fromArray(state.position);
+    controls.target.fromArray(state.target);
+    camera.zoom = state.zoom;
+    overhead = state.overhead;
+    camera.updateProjectionMatrix();
+    controls.update();
+    requestRender();
+  }
+  return { update, zoom, reset, toggleTop,  setTheme, getCamera, restoreCamera };
 }
