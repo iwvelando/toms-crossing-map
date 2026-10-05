@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures.js";
 const url = "https://toms-crossing-map.isaacvelando.com";
 test("link previews and home-screen icon @smoke", async ({ page }) => {
   await page.goto("/");

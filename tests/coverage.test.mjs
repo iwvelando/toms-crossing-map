@@ -168,6 +168,19 @@ test("malformed or ambiguous source tables fail instead of silently skipping con
   );
   assert.equal(escaped.length, 2);
 });
+
+test("blank lines retain table columns, identities and all continuation rows", () => {
+  const continued = source + "\n| DEMO-B | Person | Garden to court |\n";
+  const rows = inventory(continued).filter(item => item.kind === "record");
+  assert.equal(rows.length, 2);
+  const fingerprints = text => inventory(text).map(({ line, ...item }) => item);
+  assert.deepEqual(fingerprints(continued), fingerprints(continued.replace("\n\n| DEMO-B", "\n| DEMO-B")));
+  assert.throws(() => inventory(source + "\n| DEMO-A | Person | Again |\n"), /Duplicate/);
+  assert.throws(() => inventory(source + "\n| BROKEN | Person |\n"), /columns/);
+  assert.throws(() => inventory(source + "\nProse ends the table.\n| DEMO-B | Person | Garden |\n"), /table/);
+  const restarted = continued.replace("| DEMO-B", "| Event | People | Movement |\n|---|---|---|\n| DEMO-B");
+  assert.deepEqual(fingerprints(restarted), fingerprints(continued));
+});
 test("receipts contain hashes and public IDs, never source text or file paths", () => {
   const serialized = JSON.stringify(completed());
   for (const raw of [

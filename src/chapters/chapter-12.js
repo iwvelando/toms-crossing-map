@@ -20,8 +20,8 @@ export default {
       "id": 12,
       "title": "Ice!",
       "label": "Chapter Twelve",
-      "partial": true,
-      "scope": "Partial chapter · supplied reading boundary"
+      "partial": false,
+      "scope": "Reviewed movement coverage"
     }
   ],
   "characters": [
@@ -122,23 +122,23 @@ export default {
     {
       "id": "unnamed-lakeside-airport",
       "name": "Unnamed lakeside airport",
-      "x": -13.0,
-      "z": 5.0,
+      "x": -13,
+      "z": 5,
       "chapter": 12,
       "notes": []
     },
     {
       "id": "mud-lake",
       "name": "Mud Lake",
-      "x": -13.0,
-      "z": 3.0,
+      "x": -13,
+      "z": 3,
       "chapter": 12,
       "notes": []
     },
     {
       "id": "zurich-road",
       "name": "Zurich Road",
-      "x": -11.0,
+      "x": -11,
       "z": 3.7,
       "chapter": 12,
       "notes": []
@@ -182,6 +182,18 @@ export default {
           "text": "A previous-winter visit, rather than a stop in Friday's search flight."
         }
       ]
+    },
+    {
+      "id": "medical-examiner",
+      "name": "Utah Office of the Medical Examiner",
+      "chapter": 12,
+      "notes": [
+        {
+          "chapter": 12,
+          "text": "Address, city and transport route are unspecified."
+        }
+      ],
+      "schematic": false
     }
   ],
   "events": [
@@ -516,7 +528,7 @@ export default {
       "title": "Preparing for a night search",
       "time": "Friday afternoon",
       "summary": "They go to the Gatestone residence, feed themselves and Mungo, and list supplies for an intended night at the canyon parking lot.",
-      "note": "The return camp remains a plan at this partial-chapter boundary. No unfinished final action is supplied.",
+      "note": "The overnight parking vigil is an intention; these preparations do not establish departure.",
       "routes": {},
       "id": "preparing-for-a-night-search",
       "mode": "Travel",
@@ -950,6 +962,54 @@ export default {
       "mode": "Recollection",
       "reference": "Chapter Twelve · Ice!",
       "places": []
+    },
+    {
+      "id": "packing-the-vigil",
+      "chapter": 12,
+      "title": "Packing the vigil",
+      "time": "Friday afternoon",
+      "kind": "presence",
+      "mode": "Presence",
+      "people": [
+        "allison-march",
+        "sondra-gatestone",
+        "mungo"
+      ],
+      "actors": [
+        "allison-march",
+        "sondra-gatestone",
+        "mungo"
+      ],
+      "route": [
+        "gatestone-residence"
+      ],
+      "summary": "Allison showers, changes into layers and Tom’s boots, and helps Sondra pack food, blankets and supplies. Beckham calls at 3:39 p.m.",
+      "note": "His order to remove the ATVs does not establish their return. Neither mother departs in this scene.",
+      "reference": "Chapter Twelve · Ice!",
+      "places": [],
+      "routes": {}
+    },
+    {
+      "id": "russel-at-the-examiner",
+      "chapter": 12,
+      "title": "Russel at the examiner",
+      "time": "Thursday morning → Friday afternoon",
+      "kind": "bodily relocation",
+      "mode": "Bodily relocation",
+      "people": [
+        "russel-porch"
+      ],
+      "actors": [
+        "russel-porch"
+      ],
+      "route": [
+        "medical-examiner"
+      ],
+      "summary": "Russel’s body is taken in a bag to the medical examiner early Thursday. The Friday autopsy begins at 3:49 p.m.; evidence is labeled at 4:51.",
+      "note": "No transport route or onward removal is described.",
+      "reference": "Chapter Twelve · Ice!",
+      "places": [],
+      "routes": {}
     }
   ],
   "annotations": []

@@ -1,6 +1,6 @@
 # Tom’s Crossing — an unofficial fan atlas
 
-A chapter-based tabletop atlas of **Tom’s Crossing by Mark Z. Danielewski**. Explore a carved landscape, follow a character’s movements, and read a short journal alongside the map. The current atlas covers the supplied movement data through part of Chapter Twelve, with separate character and companion journals. The final chapter remains partial.
+A chapter-based tabletop atlas of **Tom’s Crossing by Mark Z. Danielewski**. Explore a carved landscape, follow a character’s movements, and read a short journal alongside the map. The current atlas covers the supplied movement data through part of Chapter Sixteen, with separate character and companion journals. The final chapter remains partial.
 
 This is an independent fan interpretation, not an official map. It is not affiliated with, endorsed by, or sponsored by the author or publisher. The original novel and its characters and settings are © Mark Z. Danielewski. All rights reserved. The website contains original summaries and illustrative geometry, not excerpts from the novel or audiobook recordings.
 

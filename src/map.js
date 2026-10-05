@@ -22,7 +22,7 @@ function inPolygon(x, z, vertices) {
 export function createMap(container, labelRoot, onSelect, onViewChange) {
   const scene = new THREE.Scene();
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-  let renderPending = false;
+  let renderPending = false, renderFrame, disposed = false;
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -611,6 +611,7 @@ export function createMap(container, labelRoot, onSelect, onViewChange) {
   });
   resize.observe(container);
   function render() {
+    if (disposed) return;
     renderPending = false;
     controls.update();
     const occupied = [];
@@ -690,17 +691,19 @@ export function createMap(container, labelRoot, onSelect, onViewChange) {
   // Keep damping smooth while the camera moves, then stop spending GPU/CPU
   // time on an unchanged board. Resize, story, and asset changes also redraw.
   function requestRender() {
-    if (renderPending) return;
+    if (disposed || renderPending) return;
     renderPending = true;
-    requestAnimationFrame(render);
+    renderFrame = requestAnimationFrame(render);
   }
   controls.addEventListener("change", () => { requestRender(); onViewChange?.(); });
   requestRender();
   renderer.domElement.addEventListener("webglcontextlost", (event) => {
+    if (disposed) return;
     event.preventDefault();
     document.querySelector("#map-fallback").hidden = false;
   });
   renderer.domElement.addEventListener("webglcontextrestored", () => {
+    if (disposed) return;
     document.querySelector("#map-fallback").hidden = true;
     requestRender();
   });
@@ -731,5 +734,14 @@ export function createMap(container, labelRoot, onSelect, onViewChange) {
     controls.update();
     requestRender();
   }
-  return { update, zoom, reset, toggleTop,  setTheme, getCamera, restoreCamera };
+  function dispose() {
+    if (disposed) return;
+    disposed = true;
+    cancelAnimationFrame(renderFrame);
+    resize.disconnect();
+    controls.dispose();
+    renderer.dispose();
+    renderer.forceContextLoss();
+  }
+  return { update, zoom, reset, toggleTop, setTheme, getCamera, restoreCamera, dispose };
 }

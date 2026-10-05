@@ -1,4 +1,5 @@
 // Pure disclosure projection. Chapter payloads enter only after explicit selection.
+import { maximumChapter } from "./chapter-boundary.js";
 export function combinePayloads(payloads) {
   const data = { chapters: [], characters: [], locations: [], events: [] };
   for (const payload of payloads) {
@@ -41,7 +42,7 @@ function forParticipant(event, person) {
   return event;
 }
 export function getView(limit, step, characterId = "K", data = initial, layer = "journey") {
-  const safe = Number.isInteger(limit) && limit > 0 && limit <= 12 ? limit : 0;
+  const safe = Number.isInteger(limit) && limit > 0 && limit <= maximumChapter ? limit : 0;
   const visibleCharacters = safe ? data.characters.filter(person => person.chapter <= safe) : [];
   const selected = visibleCharacters.find(person => person.id === characterId);
   const allowed = selected ? data.events.map(event => forParticipant(disclosedEvent(event, safe), selected)).filter(event => event.chapter <= safe && event.people.includes(characterId) &&

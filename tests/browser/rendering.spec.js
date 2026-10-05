@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures.js";
 test("the static board stops drawing when idle and redraws after interaction", async ({ page }) => {
   await page.addInitScript(() => {
     window.drawCalls = 0;

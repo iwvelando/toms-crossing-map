@@ -1,4 +1,4 @@
-import { test } from "@playwright/test";
+import { test } from "./fixtures.js";
 import { participantCases, latestChapter } from "../helpers/atlas-cases.mjs";
 import { checkOverflow, openChapter, visitEntries } from "./atlas-journey.js";
 

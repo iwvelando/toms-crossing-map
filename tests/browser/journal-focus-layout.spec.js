@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures.js";
 import { openChapter, checkOverflow, selectControl } from "./atlas-journey.js";
 import { loadThrough } from "../../src/chapters.js";
 import { getView } from "../../src/story.js";
