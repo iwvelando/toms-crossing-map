@@ -1,6 +1,6 @@
 import { combinePayloads } from "./story.js";
 // Only numbers and the reviewed partial boundary belong in the initial catalog.
-export const maximumChapter = 12;
+export { maximumChapter } from "./chapter-boundary.js";
 export const loaders = [
   () => import("./chapters/chapter-01.js"),
   () => import("./chapters/chapter-02.js"),
@@ -14,6 +14,10 @@ export const loaders = [
   () => import("./chapters/chapter-10.js"),
   () => import("./chapters/chapter-11.js"),
   () => import("./chapters/chapter-12.js"),
+  () => import("./chapters/chapter-13.js"),
+  () => import("./chapters/chapter-14.js"),
+  () => import("./chapters/chapter-15.js"),
+  () => import("./chapters/chapter-16.js"),
 ];
 export async function loadThrough(limit, sources = loaders) {
   if (!Number.isInteger(limit) || limit < 0 || limit > sources.length) throw new Error("Unsupported reading boundary");

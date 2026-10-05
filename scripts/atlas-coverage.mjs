@@ -86,7 +86,7 @@ export function inventory(source) {
       section = headings.filter(Boolean).join(" / ");
       proseLine = i + 2;
     } else if (line.trim().startsWith("|")) {
-      if (!table) {
+      if (!table || /^\s*\|(?:\s*:?-{3,}:?\s*\|)+\s*$/.test(lines[i + 1] || "")) {
         const header = cells(line),
           separator = cells(lines[i + 1] || "");
         assert(
@@ -117,7 +117,7 @@ export function inventory(source) {
         !/(?<!\\)\|/.test(line),
         `Unsupported table syntax at line ${i + 1}; review parser rather than treating rows as context`,
       );
-      table = null;
+      if (line.trim()) table = null;
       prose.push(line);
     }
   }

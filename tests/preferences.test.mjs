@@ -1,11 +1,16 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { normalizeState, readState, writeState, STATE_KEY } from "../src/preferences.js";
+import { maximumChapter } from "../src/chapters.js";
 
 test("saved reading state fails closed for corrupt or unsupported boundaries", () => {
-  for (const value of [null, [], {}, { version: 2, limit: 1 }, ...[-1, 13, 1.5, "12", NaN].map(limit => ({ version: 1, limit }))])
+  for (const value of [null, [], {}, { version: 2, limit: 1 }, ...[-1, maximumChapter + 1, 1.5, "12", NaN].map(limit => ({ version: 1, limit }))])
     assert.equal(normalizeState(value), null);
   assert.equal(readState({ getItem: () => "{broken" }), null);
+});
+
+test("the reviewed maximum survives validation and storage", () => {
+  assert.equal(normalizeState({ version: 1, limit: maximumChapter }).limit, maximumChapter);
 });
 test("preferences retain valid selections and discard malformed optional fields", () => {
   const value = normalizeState({ version: 1, limit: 4, characterId: "K", eventId: "selected-entry", layer: "dream", mapMode: "chapter", compared: ["K", "K", null, "bad id"], selected: false, legendOpen: true, showLocations: true, expanded: true, camera: { position: [24, 32, 36], target: [0, 0, 0], zoom: 1.2, overhead: false } });

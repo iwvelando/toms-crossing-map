@@ -3,6 +3,18 @@ import assert from "node:assert/strict";
 import { getView, combinePayloads } from "../src/story.js";
 import { loadThrough } from "../src/chapters.js";
 
+test("synthetic expanded boundaries disclose only their own payload and retract on backtracking", () => {
+  const data = combinePayloads([{ chapters: [{id: 1}, {id: 16}],
+    characters: [{id: "a", chapter: 1}, {id: "later", chapter: 16}],
+    locations: [{id: "later-place", chapter: 16, x: 1, z: 1}],
+    events: [{id: "later-entry", chapter: 16, people: ["a", "later"], actors: ["a"], route: ["later-place"], kind: "presence"}] }]);
+  assert.equal(getView(16, 0, "a", data).current.id, "later-entry");
+  const early = getView(12, 0, "a", data);
+  assert.equal(early.current, null);
+  assert.deepEqual(early.characters.map(person => person.id), ["a"]);
+  assert.equal(JSON.stringify(early).includes("later"), false);
+});
+
 test("later chapter payloads require a committed boundary", async () => {
   const calls = [];
   const loaders = [1, 2, 3].map(id => async () => {

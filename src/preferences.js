@@ -1,3 +1,4 @@
+import { maximumChapter } from "./chapter-boundary.js";
 export const STATE_KEY = "toms-crossing-map.state";
 export const THEME_KEY = "toms-crossing-map.theme";
 const layers = new Set(["journey", "all", "recollection", "plan", "spectral", "dream"]);
@@ -5,7 +6,7 @@ const validId = value => typeof value === "string" && /^[\w-]{1,120}$/.test(valu
 const vector = value => Array.isArray(value) && value.length === 3 && value.every(number => Number.isFinite(number) && Math.abs(number) <= 500);
 
 export function normalizeState(value) {
-  if (!value || Array.isArray(value) || value.version !== 1 || !Number.isInteger(value.limit) || value.limit < 0 || value.limit > 12) return null;
+  if (!value || Array.isArray(value) || value.version !== 1 || !Number.isInteger(value.limit) || value.limit < 0 || value.limit > maximumChapter) return null;
   const camera = value.camera;
   const validCamera = camera && vector(camera.position) && vector(camera.target) && Number.isFinite(camera.zoom) && camera.zoom >= 0.65 && camera.zoom <= 3 && Math.hypot(...camera.position.map((number, index) => number - camera.target[index])) > 0.1;
   return {

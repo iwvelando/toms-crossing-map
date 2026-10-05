@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { latestChapter } from "../helpers/atlas-cases.mjs";
 test("chapter gate, route steps, character isolation, and reset @smoke", async ({
   page,
 }) => {
@@ -95,7 +96,7 @@ test("chapter picker commits only explicit selections and supports dismissal", a
   await picker.press("End");
   await expect(picker).toHaveAttribute(
     "aria-activedescendant",
-    "chapter-option-12",
+    `chapter-option-${latestChapter}`,
   );
   await expect(page.locator("#locked-state")).toBeVisible();
   await picker.press("Escape");
