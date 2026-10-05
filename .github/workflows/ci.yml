@@ -107,9 +107,7 @@ jobs:
   webkit:
     needs: reuse
     if: ${{ !cancelled() && needs.reuse.outputs.run-id == '' }}
-    # ARM macOS 26 loses WebGL contexts during the expanded atlas suite.
-    # Keep the renderer assertions on a stable, explicit Intel image.
-    runs-on: macos-15-intel
+    runs-on: macos-latest
     timeout-minutes: 20
     strategy:
       fail-fast: false

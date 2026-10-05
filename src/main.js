@@ -249,7 +249,12 @@ $("#about").addEventListener("click", event => {
 });
 // URLs cannot advance the boundary. Restore only validated saved preferences;
 // lazy loading and per-field disclosure still follow that explicit reading limit.
-window.addEventListener("pagehide", persistState);
+window.addEventListener("pagehide", event => {
+  persistState();
+  // Cached pages retain their board for back/forward navigation. A discarded
+  // page must release its context before the next page creates another one.
+  if (!event.persisted) map?.dispose();
+});
 render();
 await setLimit(savedState?.limit ?? 0, savedState);
 initialized = true;

@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures.js";
 import { openChapter, checkOverflow, selectControl } from "./atlas-journey.js";
 
 test("the board stays open, with optional legend and controls outside the scene", async ({ page }, testInfo) => {

@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures.js";
 import { latestChapter } from "../helpers/atlas-cases.mjs";
 test("chapter gate, route steps, character isolation, and reset @smoke", async ({
   page,
