@@ -6,6 +6,46 @@ Copy the current **`movements.md` and `metadata.json` together** into the reposi
 
 The root agent instructions route both Codex and Claude to that skill. Its Blender guide is conditional: a new character can use an existing abstract piece. A normal content update needs neither Blender nor access to another repository.
 
+## Versioned movement handoff
+
+`heard-so-far` produces full, frozen movement snapshots with its repo-local
+`skills/log-movements/SKILL.md` and `companion/movements.py`. Its
+[movement contract](https://github.com/iwvelando/heard-so-far/blob/main/spec/movements.md)
+owns the format. This atlas vendors the exact descriptor in
+[`contracts/movement-format-v1.json`](../contracts/movement-format-v1.json) and
+the shared synthetic test corpus in
+[`contracts/movement-format-cases.json`](../contracts/movement-format-cases.json).
+Coordinate changes in both repos; a new column/meaning/required field needs a new
+version, supported here before the producer starts exporting it.
+
+v1 metadata declares `format_version: 1` and `movements_sha256`, a SHA-256 of the
+exact accompanying UTF-8 Markdown bytes. It retains private source identity and
+numeric evidence/listening intervals, adds the reported track start and a
+`reading_endpoint` with numeric chapter and `partial` / `complete` coverage, and
+declares all consulted manifest paths. The track table explicitly maps tracks
+to chapters and coverage. Movement, plan, and last-established rows carry
+`Disclosure chapter`; character/location scope fields qualify individual labels.
+All tables use exact headers from the descriptor. Blank-separated continuation
+rows, repeated headers, and escaped pipes are supported. Unknown columns,
+unsupported syntax/versions, duplicate identities, out-of-scope chapters, and
+mismatched hashes fail before reconciliation, recording, or acceptance.
+
+Copy both files from one export into the ignored root paths, then run
+`npm run atlas:check`. No producer checkout, Python, audio, transcript, or journal
+is needed here. Paths in metadata are provenance data; this consumer never opens
+them. Producer validation checks local progress and transcript completeness;
+consumer validation checks the declared pair's shape and boundaries. Neither
+certifies the prose, chapter mapping, evidence accuracy, or supported public
+coverage. Review every claim and disclosure under the normal skill before
+recording receipts.
+
+Existing unversioned pairs keep the legacy parser and receipts. Unknown declared
+versions cannot fall back to legacy. Do not modify existing local inputs just to
+add a version or hash. A reviewed producer migration creates a new full snapshot;
+changed headers alter source identities and require deliberate coverage
+reconciliation, never a blanket receipt reset or automatic acceptance. No raw
+producer artifact or provenance enters Git or the production build.
+
 ## What the checker does
 
 `npm run atlas:check` is read-only and works without installing dependencies. It inventories every Markdown table row and each section's surrounding prose, compares their fingerprints with reviewed receipts, verifies references to public objects, and compares the accepted metadata and implementation snapshot. It never opens a link/path found in the inputs and never reads audio/transcripts. It does not automatically generate prose, infer chapter boundaries, or declare facts correct.

@@ -1,11 +1,13 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { parseArgs } from "node:util";
 import { readProjection } from "./atlas-projection.mjs";
+import { validateMovementPair } from "./movement-format.mjs";
 import {
   inventory,
   reconcile,
   recordReceipt,
   acceptSnapshot,
+  validateMetadata,
 } from "./atlas-coverage.mjs";
 
 // This CLI reads only these two book sources. Never dereference their paths/links.
@@ -28,13 +30,15 @@ try {
     throw new Error(
       "Use check [--details], record --key HASH --status STATUS [--target COLLECTION:ID], or accept",
     );
+  const metadata = JSON.parse(
+    await readFile(new URL("../metadata.json", import.meta.url), "utf8"),
+  );
+  validateMetadata(metadata);
   const source = await readFile(
     new URL("../movements.md", import.meta.url),
     "utf8",
   );
-  const metadata = JSON.parse(
-    await readFile(new URL("../metadata.json", import.meta.url), "utf8"),
-  );
+  validateMovementPair(source, metadata);
   const state = JSON.parse(await readFile(statePath, "utf8"));
   const ctx = {
     source,
