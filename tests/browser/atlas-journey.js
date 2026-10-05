@@ -10,6 +10,8 @@ export async function openChapter(page, chapter) {
   await page.locator(`#chapter-option-${chapter}`).click();
   await expect(page.locator("#load-status")).toHaveText("");
   await expect(page.locator(".chapter-heading .eyebrow")).not.toBeEmpty();
+  await expect(page.locator("#map-fallback")).toBeHidden();
+  await expect(page.locator("#map")).toHaveAttribute("data-asset", "procedural");
   await selectControl(page, "#layer-select", "all");
 }
 
