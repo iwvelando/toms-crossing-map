@@ -1,6 +1,9 @@
 import { test, expect } from "./fixtures.js";
 import { openChapter, checkOverflow, selectControl } from "./atlas-journey.js";
 const key = "toms-crossing-map.state";
+// These tests reload repeatedly. Start with a fresh browser instead of the
+// shared process that just rendered all participant batches in this shard.
+test.use({ webglSession: "preferences" });
 
 test("themes follow the system until a saved toggle overrides it", async ({ page }, testInfo) => {
   await page.emulateMedia({ colorScheme: "light" });
