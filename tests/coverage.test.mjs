@@ -193,6 +193,18 @@ test("receipts contain hashes and public IDs, never source text or file paths", 
     assert(!serialized.includes(raw));
   assert(serialized.includes("events:garden"));
 });
+test("versioned handoffs gate check, recording and acceptance before changing receipts", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const fixture = JSON.parse(await readFile(new URL("../contracts/movement-format-cases.json", import.meta.url)));
+  const ctx = context(fixture.source, fixture.metadata), state = completed(ctx);
+  assert.equal(reconcile(state, ctx).upToDate, true);
+  const before = JSON.stringify(state);
+  const mismatched = context(fixture.source + "Changed prose.\n", fixture.metadata);
+  assert.throws(() => reconcile(state, mismatched), /hash mismatch/);
+  assert.throws(() => acceptSnapshot(state, mismatched), /hash mismatch/);
+  assert.throws(() => recordReceipt(state, mismatched, ctx.items[0].key, "context"), /hash mismatch/);
+  assert.equal(JSON.stringify(state), before);
+});
 test("coverage validation rejects malformed receipts and targets", () => {
   const state = completed(),
     ctx = context();
@@ -251,17 +263,19 @@ test("CLI is source-local, append-aware, and does not write an up-to-date tree",
   const { spawnSync } = await import("node:child_process");
   const dir = await mkdtemp(join(tmpdir(), "atlas-fixture-"));
   try {
-    for (const sub of ["scripts", "src", "data", "public/models"])
+    for (const sub of ["scripts", "src", "data", "contracts", "public/models"])
       await mkdir(join(dir, sub), { recursive: true });
     for (const script of [
       "atlas-coverage.mjs",
       "atlas-sync.mjs",
       "atlas-projection.mjs",
+      "movement-format.mjs",
     ])
       await copyFile(
         new URL(`../scripts/${script}`, import.meta.url),
         join(dir, "scripts", script),
       );
+    await copyFile(new URL("../contracts/movement-format-v1.json", import.meta.url), join(dir, "contracts/movement-format-v1.json"));
     await writeFile(join(dir, "package.json"), '{"type":"module"}');
     await writeFile(join(dir, "index.html"), "<title>Synthetic atlas</title>");
     await writeFile(

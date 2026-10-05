@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { validateMovementMetadata, validateMovementPair } from "./movement-format.mjs";
 import { createHash } from "node:crypto";
 
 const hashPattern = /^[a-f0-9]{64}$/;
@@ -127,6 +128,7 @@ export function inventory(source) {
 }
 
 export function validateMetadata(meta) {
+  validateMovementMetadata(meta);
   assert(
     meta?.evidence_mode === "local-only",
     "Metadata must declare local-only evidence",
@@ -253,6 +255,7 @@ export function validateCoverage(state) {
 }
 export function reconcile(state, ctx) {
   validateMetadata(ctx.metadata);
+  validateMovementPair(ctx.source, ctx.metadata);
   validateCoverage(state);
   assert(
     state.sourceIdentityHash === digest(ctx.metadata.source_identity),
