@@ -11,6 +11,12 @@ on:
   workflow_run:
     workflows: [Verify]
     types: [completed]
+# One merge at a time: two PRs passing Verify together otherwise race, and the
+# loser fails with "Base branch was modified" and is never retried. Only one run
+# can wait, so a third simultaneous one is cancelled and needs a re-run.
+concurrency:
+  group: dependabot-merge
+  cancel-in-progress: false
 permissions: {}
 jobs:
   merge:
