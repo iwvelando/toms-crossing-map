@@ -20,3 +20,19 @@ test("link previews and home-screen icon @smoke", async ({ page }) => {
     expect(png.readUInt32BE(20)).toBe(height);
   }
 });
+test("robots.txt points crawlers at the sitemap @smoke", async ({ page }) => {
+  const robots = await page.request.get("/robots.txt");
+  expect(robots.ok()).toBe(true);
+  expect(robots.headers()["content-type"]).toContain("text/plain");
+  const rules = await robots.text();
+  expect(rules).toMatch(/^User-agent: \*$/m);
+  expect(rules).toMatch(/^Allow: \/$/m);
+  expect(rules).toContain(`Sitemap: ${url}/sitemap.xml`);
+  const sitemap = await page.request.get("/sitemap.xml");
+  expect(sitemap.ok()).toBe(true);
+  expect(sitemap.headers()["content-type"]).toMatch(/xml/);
+  const xml = await sitemap.text();
+  expect(xml).toContain('xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"');
+  // Only the canonical page: URL parameters never select chapters or content.
+  expect([...xml.matchAll(/<loc>(.*?)<\/loc>/g)].map((m) => m[1])).toEqual([`${url}/`]);
+});

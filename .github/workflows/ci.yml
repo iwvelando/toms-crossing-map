@@ -201,7 +201,7 @@ jobs:
       - name: sanity-check build
         run: |
           test -n "$DISTRIBUTION_ID" || { echo "::error::Configure DISTRIBUTION_ID from the infrastructure output before merging."; exit 1; }
-          for f in index.html 404.html og-image.png apple-touch-icon.png LICENSE.txt THIRD-PARTY-NOTICES.txt models/kalin-pawn.glb; do test -s "dist/$f"; done
+          for f in index.html 404.html og-image.png apple-touch-icon.png LICENSE.txt THIRD-PARTY-NOTICES.txt robots.txt sitemap.xml models/kalin-pawn.glb; do test -s "dist/$f"; done
           ls dist/assets/*.js
 
       - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
