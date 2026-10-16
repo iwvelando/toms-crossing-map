@@ -36,6 +36,6 @@ for (const name of ["three", "vite"])
     `Missing license notice for ${name}`,
   );
 
-for (const name of ["index.html", "404.html", "favicon.svg", "og-image.png", "apple-touch-icon.png", "LICENSE.txt"])
+for (const name of ["index.html", "404.html", "favicon.svg", "og-image.png", "apple-touch-icon.png", "LICENSE.txt", "robots.txt", "sitemap.xml"])
   assert(files.includes(name), `Missing release asset: ${name}`);
 assert(files.some(name => /^assets\/.*\.js$/.test(name)), "Missing application bundle");

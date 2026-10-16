@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://toms-crossing-map.isaacvelando.com/sitemap.xml
