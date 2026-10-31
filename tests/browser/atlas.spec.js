@@ -148,6 +148,9 @@ test("public copy, attribution, distribution notices, and CSP @smoke", async ({
   await expect(page.locator(".page-footer")).toContainText(
     "not affiliated with",
   );
+  await expect(
+    page.locator(".page-footer").getByRole("link", { name: "About this site" }),
+  ).toHaveAttribute("href", "https://github.com/iwvelando/toms-crossing-map");
   await page.locator("#about-button").click();
   await expect(page.locator("#about")).toContainText(
     "audio rather than printed text",
